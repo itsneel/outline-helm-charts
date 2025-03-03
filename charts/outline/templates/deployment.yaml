@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "outline.fullname" . }}
+  labels:
+    {{- include "outline.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.outline.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "outline.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "outline.selectorLabels" . | nindent 8 }}
+    spec:
+      securityContext:
+        {{- toYaml .Values.outline.securityContext | nindent 8 }}
+      {{- if or .Values.outline.serviceAccount.create (and (eq .Values.outline.storage.type "s3") .Values.outline.storage.s3.useServiceAccount) }}
+      serviceAccountName: {{ include "outline.serviceAccountName" . }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.outline.image.repository }}:{{ .Values.outline.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.outline.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.outline.containerPort }}
+              protocol: TCP
+          livenessProbe:
+            {{- toYaml .Values.outline.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.outline.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.outline.resources | nindent 12 }}
+          env:
+            - name: NODE_ENV
+              value: {{ .Values.global.env }}
+            {{- range $key, $value := .Values.outline.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+
+            {{- if not .Values.postgresql.enabled }}
+            - name: DATABASE_URL
+              value: "postgres://{{ .Values.postgresql.external.user }}:{{ .Values.postgresql.external.password }}@{{ .Values.postgresql.external.host }}:{{ .Values.postgresql.external.port }}/{{ .Values.postgresql.external.database }}"
+            {{- else }}
+            - name: DATABASE_URL
+              value: "postgres://{{ .Values.postgresql.postgresqlUsername }}:{{ .Values.postgresql.postgresqlPassword }}@{{ include "outline.postgresql.fullname" . }}:5432/{{ .Values.postgresql.postgresqlDatabase }}"
+            {{- end }}
+
+            {{- if not .Values.redis.enabled }}
+            - name: REDIS_URL
+              value: "redis://{{ if .Values.redis.external.password }}:{{ .Values.redis.external.password }}@{{ end }}{{ .Values.redis.external.host }}:{{ .Values.redis.external.port }}"
+            {{- else }}
+            - name: REDIS_URL
+              value: "redis://{{ if .Values.redis.password }}:{{ .Values.redis.password }}@{{ end }}{{ include "outline.redis.fullname" . }}:6379"
+            {{- end }}
+
+            {{- if eq .Values.outline.storage.type "s3" }}
+            # S3 storage configuration
+            - name: FILE_STORAGE
+              value: "s3"
+            - name: AWS_REGION
+              value: {{ .Values.outline.storage.s3.region | quote }}
+            - name: AWS_S3_UPLOAD_BUCKET_NAME
+              value: {{ .Values.outline.storage.s3.bucket | quote }}
+            - name: AWS_S3_UPLOAD_BUCKET_URL
+              value: {{ .Values.outline.storage.s3.bucketUrl | quote }}
+            - name: AWS_S3_FORCE_PATH_STYLE
+              value: {{ .Values.outline.storage.s3.forcePathStyle | quote }}
+            - name: AWS_S3_ACL
+              value: {{ .Values.outline.storage.s3.acl | quote }}
+            {{- if not .Values.outline.storage.s3.useServiceAccount }}
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "outline.fullname" . }}-s3-secrets
+                  key: access-key
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "outline.fullname" . }}-s3-secrets
+                  key: secret-key
+            {{- end }}
+            {{- end }}
+          envFrom:
+            - secretRef:
+                name: {{ include "outline.fullname" . }}-secrets
+          volumeMounts:
+            {{- if eq .Values.outline.storage.type "local" }}
+            - name: data
+              mountPath: /var/lib/outline/data
+            {{- end }}
+      volumes:
+        {{- if eq .Values.outline.storage.type "local" }}
+        - name: data
+          {{- if .Values.outline.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "outline.fullname" . }}-data
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        {{- end }}

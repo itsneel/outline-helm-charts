@@ -1,0 +1,88 @@
+# Sample values file for using S3 storage with IAM role binding
+
+## Global configuration
+global:
+  env: production
+
+## Outline application configuration
+outline:
+  replicaCount: 1
+
+  image:
+    repository: outlinewiki/outline
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 80
+
+  ingress:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: nginx
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    hosts:
+      - host: wiki.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: outline-tls
+        hosts:
+          - wiki.example.com
+
+  # Configure S3 storage with IAM role
+  storage:
+    type: s3
+    s3:
+      useServiceAccount: true
+      region: "us-east-1"
+      bucket: "your-outline-bucket"
+      bucketUrl: "https://your-outline-bucket.s3.amazonaws.com"
+      forcePathStyle: false
+      acl: "private"
+
+  # Configure service account for IAM role binding
+  serviceAccount:
+    create: true
+    annotations:
+      # For AWS EKS with IAM Roles for Service Accounts (IRSA)
+      eks.amazonaws.com/role-arn: "arn:aws:iam::123456789012:role/outline-s3-role"
+      # For GCP with Workload Identity
+      # iam.gke.io/gcp-service-account: "outline-sa@your-project.iam.gserviceaccount.com"
+
+  env:
+    URL: "https://wiki.example.com"
+    PORT: 3000
+
+    # Authentication (example with Google - you need at least one auth provider)
+    GOOGLE_CLIENT_ID: "your-google-client-id"
+    GOOGLE_CLIENT_SECRET: "your-google-client-secret"
+
+  envSecrets:
+    # Generate using: openssl rand -hex 32
+    SECRET_KEY: "replace-with-a-random-key"
+    UTILS_SECRET: "replace-with-a-random-key"
+
+  # Local persistence not needed when using S3
+  persistence:
+    enabled: false
+
+## PostgreSQL configuration
+postgresql:
+  enabled: true
+  postgresqlUsername: outline
+  postgresqlPassword: "replace-with-secure-password"
+  postgresqlDatabase: outline
+  persistence:
+    enabled: true
+    size: 8Gi
+
+## Redis configuration
+redis:
+  enabled: true
+  password: "replace-with-secure-password"
+  persistence:
+    enabled: true
+    size: 1Gi

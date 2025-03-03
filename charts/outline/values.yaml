@@ -1,0 +1,183 @@
+## Global configuration
+global:
+  ## Environment to run the application in
+  env: production
+
+## Outline application configuration
+outline:
+  replicaCount: 1
+
+  image:
+    repository: outlinewiki/outline
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  containerPort: 3000
+
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+
+  ## Pod Security Context
+  securityContext:
+    runAsUser: 1001
+    runAsGroup: 1001
+    fsGroup: 1001
+
+  livenessProbe:
+    httpGet:
+      path: /_health
+      port: http
+    initialDelaySeconds: 60
+    periodSeconds: 10
+
+  readinessProbe:
+    httpGet:
+      path: /_health
+      port: http
+    initialDelaySeconds: 30
+    periodSeconds: 10
+
+  service:
+    type: ClusterIP
+    port: 80
+
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    hosts:
+      - host: outline.local
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+
+  ## Storage configuration
+  storage:
+    # Storage type: "local" or "s3"
+    type: local
+    # S3 storage configuration (when type=s3)
+    s3:
+      # Whether to use IAM role-based authentication (service account)
+      useServiceAccount: false
+      # If not using service account, provide these credentials
+      accessKey: ""
+      secretKey: ""
+      # S3 configuration
+      region: "us-east-1"
+      bucket: ""
+      bucketUrl: ""
+      # Use path style access for S3
+      forcePathStyle: false
+      # S3 ACL to use
+      acl: "private"
+      # For custom S3-compatible storage, set to true
+      isCustomEndpoint: false
+
+  ## Main application environment variables
+  env:
+    ## Required settings
+    # URL should point to the fully qualified, publicly accessible URL
+    URL: ""
+    # Port to bind to
+    PORT: 3000
+
+    ## File storage settings (overridden by storage section)
+    FILE_STORAGE: local
+    FILE_STORAGE_LOCAL_ROOT_DIR: /var/lib/outline/data
+    FILE_STORAGE_UPLOAD_MAX_SIZE: "262144000"
+
+    # Authentication methods (at least one required)
+    # Google OAuth
+    GOOGLE_CLIENT_ID: ""
+    GOOGLE_CLIENT_SECRET: ""
+
+    # Slack OAuth
+    SLACK_CLIENT_ID: ""
+    SLACK_CLIENT_SECRET: ""
+
+    # Microsoft/Azure OAuth
+    AZURE_CLIENT_ID: ""
+    AZURE_CLIENT_SECRET: ""
+    AZURE_RESOURCE_APP_ID: ""
+
+    # OIDC
+    OIDC_CLIENT_ID: ""
+    OIDC_CLIENT_SECRET: ""
+    OIDC_AUTH_URI: ""
+    OIDC_TOKEN_URI: ""
+    OIDC_USERINFO_URI: ""
+
+    # Default language
+    DEFAULT_LANGUAGE: en_US
+
+  ## Secret environment variables
+  ## These will be stored in a Kubernetes Secret
+  envSecrets:
+    ## Generate using: openssl rand -hex 32
+    SECRET_KEY: ""
+    UTILS_SECRET: ""
+
+  ## Volume configuration for local file storage
+  persistence:
+    enabled: true
+    accessMode: ReadWriteOnce
+    size: 10Gi
+    storageClass: ""
+
+  ## Service account for S3 IAM role binding
+  serviceAccount:
+    # Specifies whether a service account should be created
+    create: false
+    # Annotations to add to the service account
+    annotations: {}
+    # The name of the service account to use.
+    # If not set and create is true, a name is generated using the fullname template
+    name: ""
+
+## PostgreSQL configuration
+postgresql:
+  # Set to true to use an internal PostgreSQL deployment
+  enabled: true
+  # Connection details for external PostgreSQL (when enabled=false)
+  external:
+    host: ""
+    port: 5432
+    database: outline
+    user: outline
+    password: ""
+    # Alternatively, use existing secret
+    existingSecret: ""
+    existingSecretKey: ""
+
+  # Internal PostgreSQL configuration (when enabled=true)
+  postgresqlUsername: outline
+  postgresqlPassword: ""
+  postgresqlDatabase: outline
+  persistence:
+    enabled: true
+    size: 8Gi
+
+## Redis configuration
+redis:
+  # Set to true to use an internal Redis deployment
+  enabled: true
+  # Connection details for external Redis (when enabled=false)
+  external:
+    host: ""
+    port: 6379
+    password: ""
+    # Alternatively, use existing secret
+    existingSecret: ""
+    existingSecretKey: ""
+
+  # Internal Redis configuration (when enabled=true)
+  password: ""
+  persistence:
+    enabled: true
+    size: 1Gi

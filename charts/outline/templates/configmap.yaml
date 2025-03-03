@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "outline.fullname" . }}-config
+  labels:
+    {{- include "outline.labels" . | nindent 4 }}
+data:
+  NODE_ENV: {{ .Values.global.env | quote }}
+  {{- range $key, $value := .Values.outline.env }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}

@@ -1,0 +1,63 @@
+Thank you for installing {{ .Chart.Name }}.
+
+Your release is named {{ .Release.Name }}.
+
+To learn more about the release, try:
+
+  $ helm status {{ .Release.Name }}
+  $ helm get all {{ .Release.Name }}
+
+{{- if .Values.outline.ingress.enabled }}
+You can access your Outline instance at:
+{{- range $host := .Values.outline.ingress.hosts }}
+  http{{ if $.Values.outline.ingress.tls }}s{{ end }}://{{ $host.host }}
+{{- end }}
+{{- else }}
+Get the application URL by running these commands:
+{{- if contains "NodePort" .Values.outline.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "outline.fullname" . }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.outline.service.type }}
+  NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+        You can watch the status of by running 'kubectl get --namespace {{ .Release.Namespace }} svc -w {{ include "outline.fullname" . }}'
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "outline.fullname" . }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:{{ .Values.outline.service.port }}
+{{- else if contains "ClusterIP" .Values.outline.service.type }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "outline.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  export CONTAINER_PORT=$(kubectl get pod --namespace {{ .Release.Namespace }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:$CONTAINER_PORT
+  echo "Visit http://127.0.0.1:8080 to use your application"
+{{- end }}
+{{- end }}
+
+IMPORTANT NOTES:
+{{- if eq .Values.outline.storage.type "s3" }}
+Storage configuration: Using S3 storage
+{{- if .Values.outline.storage.s3.useServiceAccount }}
+  S3 authentication: IAM Role (using service account)
+  Make sure the service account has appropriate permissions to access the S3 bucket
+{{- else }}
+  S3 authentication: Access/Secret keys
+{{- end }}
+  S3 bucket: {{ .Values.outline.storage.s3.bucket }}
+{{- else }}
+Storage configuration: Using local storage
+{{- end }}
+
+{{- if not .Values.outline.envSecrets.SECRET_KEY }}
+  You must set a SECRET_KEY in your values file. You can generate one with:
+    openssl rand -hex 32
+{{- end }}
+{{- if not .Values.outline.envSecrets.UTILS_SECRET }}
+  You must set a UTILS_SECRET in your values file. You can generate one with:
+    openssl rand -hex 32
+{{- end }}
+{{- if not .Values.outline.env.URL }}
+  You must set the URL in your values file. This should be the fully qualified URL
+  where users will access your Outline instance.
+{{- end }}
+{{- if and (not .Values.outline.env.SLACK_CLIENT_ID) (not .Values.outline.env.GOOGLE_CLIENT_ID) (not .Values.outline.env.AZURE_CLIENT_ID) (not .Values.outline.env.OIDC_CLIENT_ID) }}
+  You must configure at least one authentication provider (Slack, Google, Microsoft, or OIDC).
+  See the documentation for more details.
+{{- end }}
