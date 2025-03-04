@@ -1,0 +1,165 @@
+## Global configuration
+global:
+  ## Environment to run the application in
+  env: production
+
+## Outline application configuration
+outline:
+  replicaCount: 1
+  containerPort: 3000
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+  securityContext:
+    runAsUser: 1001
+    runAsGroup: 1001
+    fsGroup: 1001
+  livenessProbe:
+    httpGet:
+      path: /_health
+      port: http
+    initialDelaySeconds: 60
+    periodSeconds: 10
+  readinessProbe:
+    httpGet:
+      path: /_health
+      port: http
+    initialDelaySeconds: 30
+    periodSeconds: 10
+
+  fileStorage:
+    type: s3 # set to local|s3
+    storageClassName: ""
+    storageSize: 250Gi
+    localRootDir: /var/lib/outline/data
+    uploadMaxSize: "26214400"
+    initContainerSecurityContext:
+      enabled: false
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+image:
+  repository: outlinewiki/outline
+  tag: "0.82.0"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: outline.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+
+## Main application environment variables
+env:
+  ## Required settings
+  # URL should point to the fully qualified, publicly accessible URL
+  URL: "https://wiki.example.com"
+  # Port to bind to
+  PORT: 3000
+  DEFAULT_LANGUAGE: en_US
+
+
+## Volume configuration for local file storage
+persistence:
+  enabled: true
+  accessMode: ReadWriteOnce
+  size: 10Gi
+  storageClass: ""
+
+## Service account for S3 IAM role binding
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: false
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+secrets:
+  SECRET_KEY:
+    secretName: "existing-outline-secrets"
+    secretKey: "secret-key"
+  UTILS_SECRET:
+    secretName: "existing-outline-secrets"
+    secretKey: "utils-secret"
+
+auth:
+  type: "google"
+  google:
+    CLIENT_ID:
+      secretName: "google-oauth-secret"
+      secretKey: "client-id"
+    CLIENT_SECRET:
+      secretName: "google-oauth-secret"
+      secretKey: "client-secret"
+
+## PostgreSQL configuration
+postgresql:
+  # Set to true to use an internal PostgreSQL deployment
+  enabled: true
+  # Connection details for external PostgreSQL (when enabled=false)
+  # Note: The DATABASE_URL is automatically generated and stored in a Secret
+  external:
+    host: ""
+    port: 5432
+    database: outline
+    user: outline
+    password: ""
+    # Alternatively, use existing secret
+    existingSecret: ""
+    existingSecretKey: ""
+
+  # Internal PostgreSQL configuration (when enabled=true)
+  postgresqlUsername: outline
+  postgresqlPassword: ""
+  postgresqlDatabase: outline
+  persistence:
+    enabled: true
+    size: 8Gi
+
+## Redis configuration
+redis:
+  # Set to true to use an internal Redis deployment
+  enabled: true
+  # Connection details for external Redis (when enabled=false)
+  # Note: The REDIS_URL is automatically generated and stored in a Secret
+  external:
+    host: ""
+    port: 6379
+    password: ""
+    # Alternatively, use existing secret
+    existingSecret: ""
+    existingSecretKey: ""
+
+  # Internal Redis configuration (when enabled=true)
+  password: ""
+  persistence:
+    enabled: true
+    size: 1Gi
+
+minio:
+  enabled: true
+  auth:
+    existingSecret: outline-secret
+  s3Config:
+    region: eu-central-1
+    uploadMaxSize: "26214400"
+    uploadBucketUrl: https://s3.example.com
+    uploadBucketName: outline
+    forcePathStyle: true

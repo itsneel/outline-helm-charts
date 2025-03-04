@@ -1,0 +1,85 @@
+suite: ingress test
+templates:
+  - ingress.yaml
+tests:
+  - it: should not create an ingress by default
+    set:
+      ingress:
+        enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should create a basic ingress when enabled
+    set:
+      ingress:
+        enabled: true
+        hosts:
+          - host: wiki.example.com
+            paths:
+              - path: /
+                pathType: Prefix
+      service:
+        port: 80
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Ingress
+      - equal:
+          path: spec.rules[0].host
+          value: "wiki.example.com"
+      - equal:
+          path: spec.rules[0].http.paths[0].path
+          value: /
+      - equal:
+          path: spec.rules[0].http.paths[0].pathType
+          value: Prefix
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.port.number
+          value: 80
+
+  - it: should correctly configure TLS when specified
+    set:
+      ingress:
+        enabled: true
+        hosts:
+          - host: wiki.example.com
+            paths:
+              - path: /
+                pathType: Prefix
+        tls:
+          - secretName: outline-tls
+            hosts:
+              - wiki.example.com
+      service:
+        port: 80
+    asserts:
+      - equal:
+          path: spec.tls[0].secretName
+          value: outline-tls
+      - equal:
+          path: spec.tls[0].hosts[0]
+          value: wiki.example.com
+
+  - it: should set annotations when provided
+    set:
+      ingress:
+        enabled: true
+        annotations:
+          kubernetes.io/ingress.class: nginx
+          cert-manager.io/cluster-issuer: letsencrypt-prod
+        hosts:
+          - host: wiki.example.com
+            paths:
+              - path: /
+                pathType: Prefix
+      service:
+        port: 80
+    asserts:
+      - equal:
+          path: metadata.annotations["kubernetes.io/ingress.class"]
+          value: nginx
+      - equal:
+          path: metadata.annotations["cert-manager.io/cluster-issuer"]
+          value: letsencrypt-prod

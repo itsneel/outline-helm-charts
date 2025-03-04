@@ -1,0 +1,9 @@
+build/
+
+*.swp
+*.swx
+*.swpx
+*.swpxz
+*.swpxz.tar
+*.swpxz.tar.gz
+*.swpxz.tar.gz.

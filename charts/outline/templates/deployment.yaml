@@ -1,0 +1,279 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "outline.fullname" . }}
+  labels:
+    {{- include "outline.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.outline.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "outline.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "outline.selectorLabels" . | nindent 8 }}
+    spec:
+      securityContext:
+        {{- toYaml .Values.outline.securityContext | nindent 8 }}
+      {{- if or .Values.serviceAccount.create }}
+      serviceAccountName: {{ include "outline.serviceAccountName" . }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.outline.containerPort }}
+              protocol: TCP
+          livenessProbe:
+            {{- toYaml .Values.outline.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.outline.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.outline.resources | nindent 12 }}
+          env:
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+
+            # Core secrets (SECRET_KEY, UTILS_SECRET)
+            {{- range $key, $value := .Values.secrets }}
+            {{- if and (ne $key "auth") }}
+            - name: {{ $key }}
+              {{- if kindIs "map" $value }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $value.secretName }}
+                  key: {{ $value.secretKey }}
+              {{- else }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "outline.fullname" $ }}-secrets
+                  key: {{ $key }}
+              {{- end }}
+            {{- end }}
+            {{- end }}
+
+            # Auth environment variables based on auth type
+            {{- if eq .Values.auth.type "google" }}
+            # Google OAuth
+            - name: GOOGLE_CLIENT_ID
+              {{- if kindIs "map" .Values.auth.google.CLIENT_ID }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.google.CLIENT_ID.secretName }}
+                  key: {{ .Values.auth.google.CLIENT_ID.secretKey }}
+              {{- else }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "outline.fullname" . }}-secrets
+                  key: GOOGLE_CLIENT_ID
+              {{- end }}
+            - name: GOOGLE_CLIENT_SECRET
+              {{- if kindIs "map" .Values.auth.google.CLIENT_SECRET }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.google.CLIENT_SECRET.secretName }}
+                  key: {{ .Values.auth.google.CLIENT_SECRET.secretKey }}
+              {{- else }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "outline.fullname" . }}-secrets
+                  key: GOOGLE_CLIENT_SECRET
+              {{- end }}
+            {{- else if eq .Values.auth.type "slack" }}
+            # Slack OAuth
+            - name: SLACK_CLIENT_ID
+              {{- if kindIs "map" .Values.auth.slack.CLIENT_ID }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.slack.CLIENT_ID.secretName }}
+                  key: {{ .Values.auth.slack.CLIENT_ID.secretKey }}
+              {{- else }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "outline.fullname" . }}-secrets
+                  key: SLACK_CLIENT_ID
+              {{- end }}
+            - name: SLACK_CLIENT_SECRET
+              {{- if kindIs "map" .Values.auth.slack.CLIENT_SECRET }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.slack.CLIENT_SECRET.secretName }}
+                  key: {{ .Values.auth.slack.CLIENT_SECRET.secretKey }}
+              {{- else }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "outline.fullname" . }}-secrets
+                  key: SLACK_CLIENT_SECRET
+              {{- end }}
+            {{- else if eq .Values.auth.type "azure" }}
+            # Azure OAuth
+            - name: AZURE_CLIENT_ID
+              {{- if kindIs "map" .Values.auth.azure.CLIENT_ID }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.azure.CLIENT_ID.secretName }}
+                  key: {{ .Values.auth.azure.CLIENT_ID.secretKey }}
+              {{- else }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "outline.fullname" . }}-secrets
+                  key: AZURE_CLIENT_ID
+              {{- end }}
+            - name: AZURE_CLIENT_SECRET
+              {{- if kindIs "map" .Values.auth.azure.CLIENT_SECRET }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.azure.CLIENT_SECRET.secretName }}
+                  key: {{ .Values.auth.azure.CLIENT_SECRET.secretKey }}
+              {{- else }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "outline.fullname" . }}-secrets
+                  key: AZURE_CLIENT_SECRET
+              {{- end }}
+            - name: AZURE_RESOURCE_APP_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.azure.RESOURCE_APP_ID.secretName }}
+                  key: {{ .Values.auth.azure.RESOURCE_APP_ID.secretKey }}
+            {{- else if eq .Values.auth.type "oidc" }}
+            # OIDC Authentication
+            - name: OIDC_CLIENT_ID
+              {{- if kindIs "map" .Values.auth.oidc.CLIENT_ID }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.oidc.CLIENT_ID.secretName }}
+                  key: {{ .Values.auth.oidc.CLIENT_ID.secretKey }}
+              {{- else }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "outline.fullname" . }}-secrets
+                  key: OIDC_CLIENT_ID
+              {{- end }}
+            - name: OIDC_CLIENT_SECRET
+              {{- if kindIs "map" .Values.auth.oidc.CLIENT_SECRET }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.oidc.CLIENT_SECRET.secretName }}
+                  key: {{ .Values.auth.oidc.CLIENT_SECRET.secretKey }}
+              {{- else }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "outline.fullname" . }}-secrets
+                  key: OIDC_CLIENT_SECRET
+              {{- end }}
+            - name: OIDC_AUTH_URI
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.oidc.AUTH_URI.secretName }}
+                  key: {{ .Values.auth.oidc.AUTH_URI.secretKey }}
+            - name: OIDC_TOKEN_URI
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.oidc.TOKEN_URI.secretName }}
+                  key: {{ .Values.auth.oidc.TOKEN_URI.secretKey }}
+            - name: OIDC_USERINFO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.oidc.USERINFO_URI.secretName }}
+                  key: {{ .Values.auth.oidc.USERINFO_URI.secretKey }}
+            {{- end }}
+
+            {{- if not .Values.postgresql.enabled }}
+            - name: DATABASE_URL
+              {{- if .Values.postgresql.external.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgresql.external.existingSecret }}
+                  key: {{ .Values.postgresql.external.existingSecretKey | default "DATABASE_URL" }}
+              {{- else }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "outline.fullname" . }}-secrets
+                  key: DATABASE_URL
+              {{- end }}
+            {{- else }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "outline.fullname" . }}-secrets
+                  key: DATABASE_URL
+            {{- end }}
+
+            {{- if not .Values.redis.enabled }}
+            - name: REDIS_URL
+              {{- if .Values.redis.external.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.redis.external.existingSecret }}
+                  key: {{ .Values.redis.external.existingSecretKey | default "REDIS_URL" }}
+              {{- else }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "outline.fullname" . }}-secrets
+                  key: REDIS_URL
+              {{- end }}
+            {{- else }}
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "outline.fullname" . }}-secrets
+                  key: REDIS_URL
+            {{- end }}
+
+            {{- if .Values.minio.enabled }}
+            # S3 storage configuration
+            - name: FILE_STORAGE
+              value: "s3"
+            - name: AWS_REGION
+              value: {{ .Values.minio.s3Config.region | quote }}
+            - name: AWS_S3_UPLOAD_BUCKET_NAME
+              value: {{ .Values.minio.s3Config.uploadBucketName | quote }}
+            - name: AWS_S3_UPLOAD_BUCKET_URL
+              value: {{ .Values.minio.s3Config.uploadBucketUrl | quote }}
+            - name: AWS_S3_FORCE_PATH_STYLE
+              value: {{ .Values.minio.s3Config.forcePathStyle | quote }}
+            - name: AWS_S3_ACL
+              value: "private"
+            {{- if not .Values.minio.auth.existingSecret }}
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "outline.fullname" . }}-s3-secrets
+                  key: access-key
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "outline.fullname" . }}-s3-secrets
+                  key: secret-key
+            {{- end }}
+            {{- else }}
+            # Local storage configuration
+            - name: FILE_STORAGE
+              value: {{ .Values.outline.fileStorage.type | quote }}
+            {{- end }}
+          envFrom:
+            - secretRef:
+                name: {{ include "outline.fullname" . }}-secrets
+            - configMapRef:
+                name: {{ include "outline.fullname" . }}-config
+          {{- if eq .Values.outline.fileStorage.type "local" }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/outline/data
+          {{- end }}
+      {{- if eq .Values.outline.fileStorage.type "local" }}
+      volumes:
+        - name: data
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "outline.fullname" . }}-data
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+      {{- end }}

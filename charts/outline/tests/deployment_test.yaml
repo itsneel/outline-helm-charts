@@ -1,0 +1,153 @@
+suite: deployment test
+templates:
+  - deployment.yaml
+tests:
+  - it: should set correct environment variables
+    set:
+      global:
+        env: production
+      env:
+        URL: ""
+        PORT: 3000
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: URL
+            value: ""
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PORT
+            value: "3000"
+
+  - it: should use the right image
+    set:
+      image:
+        repository: outlinewiki/outline
+        tag: 0.82.0
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: outlinewiki/outline:0.82.0
+
+  - it: should correctly configure security context
+    set:
+      outline:
+        securityContext:
+          fsGroup: 1001
+          runAsGroup: 1001
+          runAsUser: 1001
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.fsGroup
+          value: 1001
+      - equal:
+          path: spec.template.spec.securityContext.runAsGroup
+          value: 1001
+      - equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 1001
+
+  - it: should properly handle sensitive environment variables
+    set:
+      env:
+        DEFAULT_LANGUAGE: en_US
+      secrets:
+        SECRET_KEY:
+          secretName: existing-outline-secrets
+          secretKey: secret-key
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DEFAULT_LANGUAGE
+            value: en_US
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: SECRET_KEY
+            valueFrom:
+              secretKeyRef:
+                name: existing-outline-secrets
+                key: secret-key
+
+  - it: should set FILE_STORAGE to s3 when using s3 storage
+    set:
+      storage:
+        type: s3
+      minio:
+        s3Config:
+          region: eu-central-1
+          uploadBucketName: outline
+          uploadBucketUrl: https://s3.example.com
+          forcePathStyle: "true"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: FILE_STORAGE
+            value: "s3"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: AWS_REGION
+            value: "eu-central-1"
+
+  - it: should properly handle authentication secrets
+    set:
+      auth:
+        type: "google"
+        google:
+          CLIENT_ID:
+            secretName: "google-oauth-secret"
+            secretKey: "client-id"
+          CLIENT_SECRET:
+            secretName: "google-oauth-secret"
+            secretKey: "client-secret"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: GOOGLE_CLIENT_ID
+            valueFrom:
+              secretKeyRef:
+                name: google-oauth-secret
+                key: client-id
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: GOOGLE_CLIENT_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: google-oauth-secret
+                key: client-secret
+
+  - it: should handle external secret references for authentication
+    set:
+      auth:
+        type: "google"
+        google:
+          CLIENT_ID:
+            secretName: "google-oauth-secret"
+            secretKey: "client-id"
+          CLIENT_SECRET:
+            secretName: "google-oauth-secret"
+            secretKey: "client-secret"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: GOOGLE_CLIENT_ID
+            valueFrom:
+              secretKeyRef:
+                name: google-oauth-secret
+                key: client-id
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: GOOGLE_CLIENT_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: google-oauth-secret
+                key: client-secret

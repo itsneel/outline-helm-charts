@@ -1,0 +1,29 @@
+apiVersion: v2
+name: outline
+description: A Helm chart for Outline Wiki
+type: application
+version: 0.0.1
+appVersion: "0.82.0"
+keywords:
+  - knowledge-base
+  - wiki
+  - documentation
+  - collaboration
+home: https://github.com/outline/outline
+maintainers:
+  - name: Outline Team
+sources:
+  - https://github.com/outline/outline
+dependencies:
+  - name: postgresql
+    version: "12.5.8"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: postgresql.enabled
+  - name: redis
+    version: "17.9.2"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: redis.enabled
+  - name: minio
+    version: "15.0.5"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: minio.enabled

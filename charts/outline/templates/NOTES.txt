@@ -1,0 +1,66 @@
+Thank you for installing {{ .Chart.Name }}.
+
+Your release is named {{ .Release.Name }}.
+
+To learn more about the release, try:
+
+  $ helm status {{ .Release.Name }}
+  $ helm get all {{ .Release.Name }}
+
+{{- if .Values.ingress.enabled }}
+You can access your Outline instance at:
+{{- range $host := .Values.ingress.hosts }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host.host }}
+{{- end }}
+{{- else }}
+Get the application URL by running these commands:
+{{- if contains "NodePort" .Values.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "outline.fullname" . }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.service.type }}
+  NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+        You can watch the status by running 'kubectl get --namespace {{ .Release.Namespace }} svc -w {{ include "outline.fullname" . }}'
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "outline.fullname" . }} --template "{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}")
+  echo http://$SERVICE_IP:{{ .Values.service.port }}
+{{- else if contains "ClusterIP" .Values.service.type }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "outline.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  export CONTAINER_PORT=$(kubectl get pod --namespace {{ .Release.Namespace }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:$CONTAINER_PORT
+  echo "Visit http://127.0.0.1:8080 to use your application"
+{{- end }}
+{{- end }}
+
+IMPORTANT NOTES:
+{{- if eq (.Values.outline.fileStorage.type | default "local") "s3" }}
+Storage configuration: Using S3 storage
+{{- if .Values.minio.auth.existingSecret }}
+  S3 authentication: Using existing secret '{{ .Values.minio.auth.existingSecret }}'
+{{- else if .Values.storage.s3.useServiceAccount }}
+  S3 authentication: IAM Role (using service account)
+  Ensure the service account has appropriate permissions to access the S3 bucket
+{{- else }}
+  S3 authentication: Access Key/Secret Key
+{{- end }}
+  S3 Bucket URL: {{ .Values.minio.s3Config.uploadBucketUrl }}
+  S3 Bucket Name: {{ .Values.minio.s3Config.uploadBucketName }}
+{{- else }}
+Storage configuration: Using local storage
+{{- end }}
+
+{{- if not .Values.secrets.SECRET_KEY }}
+  You must set a SECRET_KEY in your values file. Generate one with:
+    openssl rand -hex 32
+{{- end }}
+{{- if not .Values.secrets.UTILS_SECRET }}
+  You must set a UTILS_SECRET in your values file. Generate one with:
+    openssl rand -hex 32
+{{- end }}
+{{- if not .Values.env.URL }}
+  You must set the URL in your values file. This should be the fully qualified URL
+  where users will access your Outline instance.
+{{- end }}
+{{- if not .Values.auth.type }}
+  You must configure at least one authentication provider (Slack, Google, Microsoft, or OIDC).
+  See the documentation for more details.
+{{- end }}
