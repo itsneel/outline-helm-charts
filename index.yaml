@@ -206,6 +206,39 @@ entries:
     version: 0.1.1
   - apiVersion: v2
     appVersion: 0.82.0
+    created: "2025-03-05T12:54:45.308331233Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: https://charts.bitnami.com/bitnami
+      version: 12.5.8
+    - condition: redis.enabled
+      name: redis
+      repository: https://charts.bitnami.com/bitnami
+      version: 20.11.2
+    - condition: minio.enabled
+      name: minio
+      repository: https://charts.bitnami.com/bitnami
+      version: 15.0.5
+    description: A Helm chart for Outline Wiki
+    digest: a5fbb387124307e12503bef4e1984228072b3d1fee04c44ecff2b73e4b6a61d8
+    home: https://github.com/outline/outline
+    keywords:
+    - knowledge-base
+    - wiki
+    - documentation
+    - collaboration
+    maintainers:
+    - name: Outline Team
+    name: outline
+    sources:
+    - https://github.com/outline/outline
+    type: application
+    urls:
+    - https://github.com/itsneel/outline-helm-charts/releases/download/outline-0.0.5/outline-0.0.5.tgz
+    version: 0.0.5
+  - apiVersion: v2
+    appVersion: 0.82.0
     created: "2025-03-05T11:58:26.051097779Z"
     dependencies:
     - condition: postgresql.enabled
@@ -303,4 +336,4 @@ entries:
     urls:
     - https://github.com/itsneel/outline-helm-charts/releases/download/outline-0.0.2/outline-0.0.2.tgz
     version: 0.0.2
-generated: "2025-03-05T11:58:26.051138025Z"
+generated: "2025-03-05T12:54:45.308368433Z"
