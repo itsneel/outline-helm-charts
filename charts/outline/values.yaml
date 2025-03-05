@@ -4,9 +4,33 @@ global:
   env: production
 
 ## Outline application configuration
+
+## @param outline.secretKey.value Direct value for the secret key, if not using Kubernetes secret.
+## @param outline.secretKey.existingSecret Reference to an existing Kubernetes secret for the secret key (outline-secret-key).
+## @param outline.utilsSecret.value Direct value for the utilities secret, if not using Kubernetes secret.
+## @param outline.utilsSecret.existingSecret Reference to an existing Kubernetes secret for the utilities secret (outline-utils-key).
+## @param outline.nodeEnv The environment in which the application is running (e.g., production, development).
+## @param outline.database.connectionPoolMin Minimum number of connections in the database pool.
+## @param outline.database.connectionPoolMax Maximum number of connections in the database pool.
+## @param outline.database.sslMode SSL mode for the database connection.
+## @param outline.service.url The URL where the application will be accessible.
+## @param outline.service.port The port on which the application will run.
+## @param outline.fileStorage.type Type of file storage to be used (e.g., local, s3).
+## @param outline.fileStorage.storageClassName The storageclass name to use default "".
+## @param outline.fileStorage.storageSize The storageclass size to use default 250Gi.
+## @param outline.fileStorage.localRootDir Local directory path for storing files, if using local storage.
+## @param outline.fileStorage.uploadMaxSize Maximum file upload size limit.
+## @param outline.fileStorage.initContainerSecurityContext.enabled Whether to set the security context for the initContainer. Useful for deployments on GKE and similar.
+## @param outline.nodeSelector Optional node selector to use.
+## @param outline.tolerations Whether to set node tolerations.
+## @param outline.affinity Whether to set node affinity.
 outline:
   replicaCount: 1
   containerPort: 3000
+  database:
+    connectionPoolMin: ""
+    connectionPoolMax: "20"
+    sslMode: disable
   resources:
     limits:
       cpu: 1000m
@@ -43,6 +67,103 @@ outline:
   tolerations: []
   affinity: {}
 
+
+## @param optional.collaborationUrl URL for collaboration features, if any.
+## @param optional.forceHttps Forces HTTPS connections for increased security.
+## @param optional.enableUpdates Enables automatic application updates.
+## @param optional.webConcurrency Number of concurrent web processes to run.
+## @param optional.fileStorageImportMaxSize Maximum size limit for importing documents.
+## @param optional.logLevel Sets the level of logging detail (e.g., info, error, debug).
+## @param optional.googleAnalyticsId Google Analytics ID for website traffic analysis.
+## @param optional.iframely.enabled Whether to enable iframely.
+## @param optional.iframely.url URL of the iframely server.
+## @param optional.iframely.apiKey api key of the iframely server.
+## @param optional.sentry.dsn Data Source Name for Sentry, used to report errors.
+## @param optional.sentry.tunnel URL for Sentry tunnel, useful for bypassing ad blockers.
+## @param optional.github.enabled Whether to enable GitHub integration.
+## @param optional.github.clientId.value Direct value for the GitHub client ID, if not using Kubernetes secret.
+## @param optional.github.clientId.existingSecret Reference to an existing Kubernetes secret for the GitHub client ID (github-client-id).
+## @param optional.github.clientSecret.value Direct value for the GitHub client secret, if not using Kubernetes secret.
+## @param optional.github.clientSecret.existingSecret Reference to an existing Kubernetes secret for the GitHub client secret (github-client-secret).
+## @param optional.github.appName.value Direct value for the GitHub app name, if not using Kubernetes secret.
+## @param optional.github.appName.existingSecret Reference to an existing Kubernetes secret for the GitHub app name (github-app-name).
+## @param optional.github.appId.value Direct value for the GitHub app ID, if not using Kubernetes secret.
+## @param optional.github.appId.existingSecret Reference to an existing Kubernetes secret for the GitHub app ID (github-app-id).
+## @param optional.github.appPrivateKey.value Direct value for the GitHub app private key, if not using Kubernetes secret.
+## @param optional.github.appPrivateKey.existingSecret Reference to an existing Kubernetes secret for the GitHub app private key (github-app-private-key).
+## @param optional.smtp.enabled Whether to enable SMTP.
+## @param optional.smtp.host Hostname of the SMTP server.
+## @param optional.smtp.port Port number for the SMTP server.
+## @param optional.smtp.username Username for SMTP server authentication.
+## @param optional.smtp.existingSecret Reference to an existing Kubernetes secret for SMTP password configuration (smtp-password).
+## @param optional.smtp.password Password for SMTP server authentication.
+## @param optional.smtp.fromEmail Email address used as the sender in outgoing emails.
+## @param optional.smtp.replyEmail Email address used for replies to outgoing emails.
+## @param optional.smtp.tlsCiphers TLS ciphers to use for SMTP connections.
+## @param optional.smtp.secure Boolean indicating whether to use a secure connection for SMTP.
+## @param optional.defaultLanguage Default language setting for the application interface.
+## @param optional.rateLimiter.enabled Enable or disable rate limiting.
+## @param optional.rateLimiter.requests Number of requests allowed per time window.
+## @param optional.rateLimiter.durationWindow Duration of the rate limit window in seconds.
+## @param optional.developmentUnsafeInlineCsp Enables unsafe-inline CSP directive in development mode.
+## @param optional.ssl.key Base64 encoded private key for SSL.
+## @param optional.ssl.cert Base64 encoded certificate for SSL.
+## @param optional.cdnUrl URL for Content Delivery Network, if used.
+##
+optional:
+  collaborationUrl: ""
+  forceHttps: false
+  enableUpdates: false
+  webConcurrency: 1
+  fileStorageImportMaxSize: "5120000"
+  logLevel: info
+  googleAnalyticsId: ""
+  iframely:
+    enabled: false
+    url: "http://iframely:8061"
+    apiKey: ""
+  sentry:
+    dsn: ""
+    tunnel: ""
+  github:
+    enabled: false
+    clientId:
+      value: ""
+      existingSecret: ""
+    clientSecret:
+      value: ""
+      existingSecret: ""
+    appName:
+      value: ""
+      existingSecret: ""
+    appId:
+      value: ""
+      existingSecret: ""
+    appPrivateKey:
+      value: ""
+      existingSecret: ""
+  smtp:
+    enabled: false
+    host: ""
+    port: ""
+    username: ""
+    existingSecret: ""
+    password: ""
+    fromEmail: hello@example.com
+    replyEmail: hello@example.com
+    tlsCiphers: ""
+    secure: true
+  defaultLanguage: en_US
+  rateLimiter:
+    enabled: false
+    requests: 1000
+    durationWindow: 60
+  developmentUnsafeInlineCsp: false
+  ssl:
+    key: ""
+    cert: ""
+  cdnUrl: ""
+
 image:
   repository: outlinewiki/outline
   tag: "0.82.0"
@@ -74,6 +195,16 @@ env:
   DEFAULT_LANGUAGE: en_US
 
 
+## Environment from secrets
+envSecrets:
+  DATABASE_URL:
+    secretName: "outline-secrets"
+    secretKey: "DATABASE_URL"
+  REDIS_URL:
+    secretName: "outline-secrets"
+    secretKey: "REDIS_URL"
+
+
 ## Volume configuration for local file storage
 persistence:
   enabled: true
@@ -99,6 +230,24 @@ secrets:
     secretName: "existing-outline-secrets"
     secretKey: "utils-secret"
 
+
+## @section Authentication parameters
+
+## @param auth.type Authentication type: 'google' or 'oidc' or 'slack' or 'azure'.
+## @param auth.google.CLIENT_ID Google OAuth client ID.
+## @param auth.google.CLIENT_SECRET Google OAuth client secret.
+## @param auth.oidc.AUTH_URI OIDC authentication URI.
+## @param auth.oidc.TOKEN_URI OIDC token URI.
+## @param auth.oidc.USERINFO_URI OIDC userinfo URI.
+## @param auth.oidc.CLIENT_ID OIDC client ID.
+## @param auth.oidc.CLIENT_SECRET OIDC client secret.
+## @param auth.slack.CLIENT_ID Slack client ID.
+## @param auth.slack.CLIENT_SECRET Slack client secret.
+## @param auth.azure.CLIENT_ID Azure client ID.
+## @param auth.azure.CLIENT_SECRET Azure client secret.
+## @param auth.azure.TENANT_ID Azure tenant ID.
+## @param auth.azure.CLIENT_SECRET Azure client secret.
+##
 auth:
   type: "google"
   google:
@@ -109,43 +258,19 @@ auth:
       secretName: "google-oauth-secret"
       secretKey: "client-secret"
 
-## PostgreSQL configuration
-postgresql:
-  # Set to true to use an internal PostgreSQL deployment
-  enabled: true
-  # Connection details for external PostgreSQL (when enabled=false)
-  # Note: The DATABASE_URL is automatically generated and stored in a Secret
-  external:
-    host: ""
-    port: 5432
-    database: outline
-    user: outline
-    password: ""
-    # Alternatively, use existing secret
-    existingSecret: ""
-    existingSecretKey: ""
 
-  # Internal PostgreSQL configuration (when enabled=true)
-  postgresqlUsername: outline
-  postgresqlPassword: ""
-  postgresqlDatabase: outline
-  persistence:
-    enabled: true
-    size: 8Gi
+## @section Redis parameters
 
-## Redis configuration
+## @param redis.architecture Redis deployment architecture: 'standalone' or 'replication'.
+## @param redis.auth.enabled Enable or disable authentication for Redis.
+##
 redis:
   # Set to true to use an internal Redis deployment
   enabled: true
-  # Connection details for external Redis (when enabled=false)
-  # Note: The REDIS_URL is automatically generated and stored in a Secret
-  external:
-    host: ""
-    port: 6379
-    password: ""
-    # Alternatively, use existing secret
-    existingSecret: ""
-    existingSecretKey: ""
+  architecture: standalone
+
+  auth:
+    enabled: false
 
   # Internal Redis configuration (when enabled=true)
   password: ""
@@ -153,13 +278,71 @@ redis:
     enabled: true
     size: 1Gi
 
-minio:
-  enabled: true
+
+## @section PostgreSQL parameters
+
+## @param postgresql.architecture PostgreSQL deployment architecture: 'standalone' or 'replication'.
+## @param postgresql.auth.host the hostname of the database default is {{ .Release.Name }}-postgresql .
+## @param postgresql.auth.database Name of the default database created on initial startup.
+## @param postgresql.auth.username Username for the default database.
+## @param postgresql.auth.existingSecret Reference to an existing Kubernetes secret containing the database credentials. Use 'password' for user, and 'postgres-password' for postgres user.
+## @param postgresql.auth.password Password for the default database user (used if existingSecret is not specified).
+## @param postgresql.auth.postgresPassword Password for the 'postgres' administrative user (used if existingSecret is not specified).
+##
+postgresql:
+  # Set to true to use an internal PostgreSQL deployment
+  enabled: false
+
+  architecture: standalone
   auth:
-    existingSecret: outline-secret
+    host: ""
+    port: 5432
+    database: outline
+    username: outline
+    existingSecret: ""
+    password: ""
+    postgresPassword: ""
+  persistence:
+    enabled: true
+    size: 8Gi
+
+
+
+## @section Minio parameters
+
+## @param minio.mode MinIO deployment mode: 'standalone' or 'distributed'.
+## @param minio.disableWebUI Enable or disable the MinIO web user interface.
+## @param minio.defaultBuckets Comma-separated list of default buckets to create on startup.
+## @param minio.auth.rootUser Root user name for MinIO access.
+## @param minio.auth.existingSecret Reference to an existing Kubernetes secret containing MinIO credentials. Use 'root-user' for user, and 'root-password' for the password.
+## @param minio.auth.rootPassword Root password for MinIO access (used if existingSecret is not specified).
+## @param minio.ingress.enabled Enable or disable Ingress for MinIO.
+## @param minio.ingress.hostname Default host for the ingress resource for MinIO.
+## @param minio.s3Config.region Direct value for the AWS region, if not using Kubernetes secret.
+## @param minio.s3Config.accelerateUrl URL for S3 Transfer Acceleration.
+## @param minio.s3Config.uploadMaxSize Max size for S3 uploads.
+## @param minio.s3Config.uploadBucketUrl URL to the S3 bucket for uploads.
+## @param minio.s3Config.uploadBucketName Name of the S3 bucket for uploads.
+## @param minio.s3Config.forcePathStyle Whether to force path style URLs for S3.
+## @param minio.s3Config.acl Default ACL for S3 objects.
+##
+minio:
+  enabled: false
+  mode: standalone
+  disableWebUI: false
+  defaultBuckets: outline
+  auth:
+    rootUser: ""
+    existingSecret: ""
+    rootPassword: ""
+  ingress:
+    enabled: false
+    hostname: "outline.server.example"
   s3Config:
-    region: eu-central-1
+    region: "eu-central-1"
+    accelerateUrl: ""
     uploadMaxSize: "26214400"
-    uploadBucketUrl: https://s3.example.com
+    uploadBucketUrl: http://minio.minio.svc.cluster.local:4569
     uploadBucketName: outline
     forcePathStyle: true
+    acl: private

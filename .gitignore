@@ -7,3 +7,4 @@ build/
 *.swpxz.tar
 *.swpxz.tar.gz
 *.swpxz.tar.gz.
+packages/*.tgz

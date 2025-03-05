@@ -1,0 +1,103 @@
+# Storage configurations for Outline
+
+# Local storage configuration
+local-storage: &local
+  outline:
+    fileStorage:
+      type: local
+      localRootDir: /var/lib/outline/data
+      uploadMaxSize: "26214400"
+
+  persistence:
+    enabled: true
+    accessMode: ReadWriteOnce
+    size: 50Gi
+    storageClass: "standard"
+
+  minio:
+    enabled: false
+
+# MinIO S3-compatible storage
+minio-storage: &minio
+  outline:
+    fileStorage:
+      type: s3
+      uploadMaxSize: "26214400"
+
+  minio:
+    enabled: true
+    mode: standalone
+    disableWebUI: false
+    defaultBuckets: outline
+    auth:
+      rootUser: "minio-admin"
+      rootPassword: "change-me-in-production"
+    s3Config:
+      region: "us-east-1"
+      uploadBucketUrl: "http://minio:9000"
+      uploadBucketName: outline
+      forcePathStyle: true
+      acl: private
+
+# AWS S3 storage with access keys
+aws-s3-keys: &aws-keys
+  outline:
+    fileStorage:
+      type: s3
+      uploadMaxSize: "26214400"
+
+  minio:
+    enabled: false
+
+  env:
+    AWS_REGION: "us-east-1"
+    AWS_S3_UPLOAD_BUCKET_URL: "https://s3.amazonaws.com"
+    AWS_S3_UPLOAD_BUCKET_NAME: "my-outline-bucket"
+    AWS_S3_FORCE_PATH_STYLE: "false"
+
+  envSecrets:
+    AWS_ACCESS_KEY_ID:
+      secretName: "outline-aws-secrets"
+      secretKey: "access-key-id"
+    AWS_SECRET_ACCESS_KEY:
+      secretName: "outline-aws-secrets"
+      secretKey: "secret-access-key"
+
+# AWS S3 storage with IAM roles
+aws-s3-iam: &aws-iam
+  outline:
+    fileStorage:
+      type: s3
+      uploadMaxSize: "26214400"
+
+  minio:
+    enabled: false
+
+  env:
+    AWS_REGION: "us-east-1"
+    AWS_S3_UPLOAD_BUCKET_URL: "https://s3.amazonaws.com"
+    AWS_S3_UPLOAD_BUCKET_NAME: "my-outline-bucket"
+    AWS_S3_FORCE_PATH_STYLE: "false"
+
+  serviceAccount:
+    create: true
+    annotations:
+      eks.amazonaws.com/role-arn: "arn:aws:iam::123456789012:role/outline-s3-role"
+    name: "outline"
+
+# To use one of these configurations, use the following syntax:
+# helm install my-release outline/outline -f values.yaml -f storage-configurations.yaml --set-file storage=minio-storage
+
+# Choose one of these storage configurations by uncommenting:
+
+# Use local storage
+<<: *local
+
+# Use MinIO storage
+# <<: *minio
+
+# Use AWS S3 with access keys
+# <<: *aws-keys
+
+# Use AWS S3 with IAM roles
+# <<: *aws-iam

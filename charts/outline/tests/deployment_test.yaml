@@ -74,25 +74,35 @@ tests:
 
   - it: should set FILE_STORAGE to s3 when using s3 storage
     set:
-      storage:
-        type: s3
+      outline:
+        fileStorage:
+          type: s3
       minio:
+        enabled: true
         s3Config:
           region: eu-central-1
           uploadBucketName: outline
           uploadBucketUrl: https://s3.example.com
           forcePathStyle: "true"
+        auth:
+          rootUser: minio-user
+          rootPassword: minio-password
     asserts:
-      - contains:
-          path: spec.template.spec.containers[0].env
-          content:
-            name: FILE_STORAGE
-            value: "s3"
       - contains:
           path: spec.template.spec.containers[0].env
           content:
             name: AWS_REGION
             value: "eu-central-1"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: AWS_S3_UPLOAD_BUCKET_NAME
+            value: "outline"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: AWS_ACCESS_KEY_ID
+            value: "minio-user"
 
   - it: should properly handle authentication secrets
     set:

@@ -58,34 +58,35 @@ helm delete my-outline
 | `outline.ingress.annotations`           | Additional annotations for the Ingress resource                               | `{}`                     |
 | `outline.ingress.hosts`                 | Hosts configuration for the Ingress controller                                | `[{"host": "outline.local", "paths": [{"path": "/", "pathType": "Prefix"}]}]` |
 | `outline.ingress.tls`                   | TLS configuration for the Ingress controller                                  | `[]`                     |
-| `outline.storage.type`                  | Storage type (`local` or `s3`)                                                | `local`                  |
-| `outline.storage.s3.*`                  | S3 storage configuration (see below)                                          | See values.yaml          |
+| `outline.fileStorage.type`              | Storage type (`local` or `s3`)                                                | `local`                  |
+| `outline.fileStorage.uploadMaxSize`     | Maximum upload size for files                                                 | `26214400`               |
+| `outline.fileStorage.localRootDir`      | Root directory for local file storage                                         | `/var/lib/outline/data`  |
 | `outline.persistence.enabled`           | Enable persistence using PVC (for local storage type)                         | `true`                   |
 | `outline.persistence.accessMode`        | PVC Access Mode                                                               | `ReadWriteOnce`          |
 | `outline.persistence.size`              | PVC Storage Request                                                           | `10Gi`                   |
 | `outline.persistence.storageClass`      | Storage class of backing PVC                                                  | `""`                     |
-| `outline.serviceAccount.*`              | Service account configuration (for S3 IAM role binding)                       | See values.yaml          |
-| `outline.env`                           | Outline environment variables                                                 | Check `values.yaml` file |
-| `outline.envSecrets`                    | Outline sensitive environment variables (stored as secrets)                   | Check `values.yaml` file |
-| `outline.secrets`                       | Additional secrets to be stored in Kubernetes Secret                          | `{}`                     |
+| `serviceAccount.*`                      | Service account configuration (for S3 IAM role binding)                       | See values.yaml          |
+| `env`                                   | Outline environment variables                                                 | Check `values.yaml` file |
+| `envSecrets`                            | Outline sensitive environment variables (stored as secrets)                   | Check `values.yaml` file |
+| `secrets`                               | Additional secrets to be stored in Kubernetes Secret                          | `{}`                     |
 
 ### S3 Storage Configuration
 
-| Name                                      | Description                                                                   | Value                  |
-| ----------------------------------------- | ----------------------------------------------------------------------------- | ---------------------- |
-| `outline.storage.type`                    | Set to `s3` to use S3 storage instead of local storage                        | `local`                |
-| `outline.storage.s3.useServiceAccount`    | Whether to use IAM role-based authentication (via service account)            | `false`                |
-| `outline.storage.s3.accessKey`            | AWS access key (when not using service account)                               | `""`                   |
-| `outline.storage.s3.secretKey`            | AWS secret key (when not using service account)                               | `""`                   |
-| `outline.storage.s3.region`               | AWS region                                                                    | `us-east-1`            |
-| `outline.storage.s3.bucket`               | S3 bucket name                                                                | `""`                   |
-| `outline.storage.s3.bucketUrl`            | S3 bucket URL                                                                 | `""`                   |
-| `outline.storage.s3.forcePathStyle`       | Use path style access for S3 (required for some S3-compatible services)       | `false`                |
-| `outline.storage.s3.acl`                  | S3 ACL to use                                                                 | `private`              |
-| `outline.storage.s3.isCustomEndpoint`     | Set to true for custom S3-compatible storage                                  | `false`                |
-| `outline.serviceAccount.create`           | Whether to create a service account                                           | `false`                |
-| `outline.serviceAccount.annotations`      | Annotations to add to the service account (for IAM role binding)              | `{}`                   |
-| `outline.serviceAccount.name`             | Name of the service account                                                   | `""`                   |
+When using S3 storage, you can either use MinIO (deployed as part of the chart) or an external S3-compatible service:
+
+| Name                                  | Description                                                                   | Value                  |
+| ------------------------------------- | ----------------------------------------------------------------------------- | ---------------------- |
+| `outline.fileStorage.type`            | Set to `s3` to use S3 storage instead of local storage                        | `local`                |
+| `minio.enabled`                       | Whether to deploy MinIO as part of the release                                | `false`                |
+| `minio.auth.existingSecret`           | Reference to existing secret with MinIO credentials                           | `""`                   |
+| `minio.s3Config.region`               | AWS/S3 region                                                                 | `us-east-1`            |
+| `minio.s3Config.uploadBucketUrl`      | S3 bucket URL                                                                 | `""`                   |
+| `minio.s3Config.uploadBucketName`     | S3 bucket name                                                                | `outline`              |
+| `minio.s3Config.forcePathStyle`       | Use path style access for S3 (required for some S3-compatible services)       | `true`                 |
+| `minio.s3Config.acl`                  | S3 ACL to use                                                                 | `private`              |
+| `serviceAccount.create`               | Whether to create a service account                                           | `false`                |
+| `serviceAccount.annotations`          | Annotations to add to the service account (for IAM role binding)              | `{}`                   |
+| `serviceAccount.name`                 | Name of the service account                                                   | `""`                   |
 
 ### PostgreSQL parameters
 
@@ -165,172 +166,189 @@ Local storage is enabled by default:
 
 ```yaml
 outline:
-  storage:
+  fileStorage:
     type: local
+    localRootDir: /var/lib/outline/data
+    uploadMaxSize: "26214400"
   persistence:
     enabled: true
     size: 10Gi
 ```
 
-### Using S3 Storage with IAM Role (Service Account)
+### Using MinIO for S3-Compatible Storage
+
+To use the bundled MinIO for S3-compatible storage:
+
+```yaml
+outline:
+  fileStorage:
+    type: s3
+    uploadMaxSize: "26214400"
+
+minio:
+  enabled: true
+  auth:
+    rootUser: "minio-admin"
+    rootPassword: "change-me-in-production"
+  s3Config:
+    region: "us-east-1"
+    uploadBucketUrl: "http://minio:9000"
+    uploadBucketName: outline
+    forcePathStyle: true
+    acl: private
+```
+
+### Using AWS S3 with IAM Role (Service Account)
 
 For AWS EKS with IAM Roles for Service Accounts (IRSA):
 
 ```yaml
 outline:
-  storage:
+  fileStorage:
     type: s3
-    s3:
-      useServiceAccount: true
-      region: "us-east-1"
-      bucket: "your-outline-bucket"
-      bucketUrl: "https://your-outline-bucket.s3.amazonaws.com"
+    uploadMaxSize: "26214400"
 
-  serviceAccount:
-    create: true
-    annotations:
-      eks.amazonaws.com/role-arn: "arn:aws:iam::123456789012:role/outline-s3-role"
+minio:
+  enabled: false
+
+env:
+  AWS_REGION: "us-east-1"
+  AWS_S3_UPLOAD_BUCKET_URL: "https://s3.amazonaws.com"
+  AWS_S3_UPLOAD_BUCKET_NAME: "my-outline-bucket"
+  AWS_S3_FORCE_PATH_STYLE: "false"
+
+serviceAccount:
+  create: true
+  annotations:
+    eks.amazonaws.com/role-arn: "arn:aws:iam::123456789012:role/outline-s3-role"
 ```
 
-For GCP GKE with Workload Identity:
+### Using AWS S3 with Access Keys
+
+To use AWS S3 with access keys:
 
 ```yaml
 outline:
-  storage:
+  fileStorage:
     type: s3
-    s3:
-      useServiceAccount: true
-      region: "us-east-1"
-      bucket: "your-outline-bucket"
-      bucketUrl: "https://your-outline-bucket.s3.amazonaws.com"
+    uploadMaxSize: "26214400"
 
-  serviceAccount:
-    create: true
-    annotations:
-      iam.gke.io/gcp-service-account: "outline-sa@your-project.iam.gserviceaccount.com"
-```
+minio:
+  enabled: false
 
-### Using S3 Storage with Access Keys
+env:
+  AWS_REGION: "us-east-1"
+  AWS_S3_UPLOAD_BUCKET_URL: "https://s3.amazonaws.com"
+  AWS_S3_UPLOAD_BUCKET_NAME: "my-outline-bucket"
+  AWS_S3_FORCE_PATH_STYLE: "false"
 
-```yaml
-outline:
-  storage:
-    type: s3
-    s3:
-      useServiceAccount: false
-      accessKey: "your-aws-access-key"
-      secretKey: "your-aws-secret-key"
-      region: "us-east-1"
-      bucket: "your-outline-bucket"
-      bucketUrl: "https://your-outline-bucket.s3.amazonaws.com"
-```
-
-### Using MinIO or other S3-compatible Storage
-
-```yaml
-outline:
-  storage:
-    type: s3
-    s3:
-      useServiceAccount: false
-      accessKey: "your-minio-access-key"
-      secretKey: "your-minio-secret-key"
-      region: "us-east-1"
-      bucket: "outline"
-      bucketUrl: "https://your-minio-instance/outline"
-      forcePathStyle: true
-      isCustomEndpoint: true
+envSecrets:
+  AWS_ACCESS_KEY_ID:
+    secretName: "outline-aws-secrets"
+    secretKey: "access-key-id"
+  AWS_SECRET_ACCESS_KEY:
+    secretName: "outline-aws-secrets"
+    secretKey: "secret-access-key"
 ```
 
 ## Authentication Configuration
 
-Outline requires at least one authentication provider. Configure your preferred authentication method using the `outline.secrets.auth` section:
+Outline requires at least one authentication provider. The configuration is now at the top level under the `auth` key:
 
 ```yaml
-outline:
-  secrets:
-    # Core secrets required by Outline
-    SECRET_KEY: "your-random-32-byte-hex-key"
-    UTILS_SECRET: "your-random-32-byte-hex-key"
+auth:
+  type: "google" # One of: google, slack, oidc, azure
 
-    # Authentication configuration - choose ONE type
-    auth:
-      type: "google"  # Options: google, slack, azure, oidc
-
-      # Google OAuth configuration
-      google:
-        CLIENT_ID: "your-google-client-id"
-        CLIENT_SECRET: "your-google-client-secret"
-
-      # OR Slack configuration (when type is "slack")
-      # slack:
-      #   CLIENT_ID: "your-slack-client-id"
-      #   CLIENT_SECRET: "your-slack-client-secret"
-
-      # OR Azure/Microsoft configuration (when type is "azure")
-      # azure:
-      #   CLIENT_ID: "your-azure-client-id"
-      #   CLIENT_SECRET: "your-azure-client-secret"
-      #   RESOURCE_APP_ID: "your-azure-resource-app-id"
-
-      # OR OIDC configuration (when type is "oidc")
-      # oidc:
-      #   CLIENT_ID: "your-oidc-client-id"
-      #   CLIENT_SECRET: "your-oidc-client-secret"
-      #   AUTH_URI: "https://your-oidc-provider/auth"
-      #   TOKEN_URI: "https://your-oidc-provider/token"
-      #   USERINFO_URI: "https://your-oidc-provider/userinfo"
+  # Google OAuth configuration
+  google:
+    CLIENT_ID:
+      secretName: "google-oauth-secret"
+      secretKey: "client-id"
+    CLIENT_SECRET:
+      secretName: "google-oauth-secret"
+      secretKey: "client-secret"
 ```
 
-### Using External Secrets
-
-You can also reference existing Kubernetes secrets for sensitive authentication values:
+Other available providers:
 
 ```yaml
-outline:
-  secrets:
-    SECRET_KEY:
-      secretName: "existing-outline-secrets"
-      secretKey: "secret-key"
-    UTILS_SECRET:
-      secretName: "existing-outline-secrets"
-      secretKey: "utils-secret"
+# Slack authentication
+auth:
+  type: "slack"
+  slack:
+    CLIENT_ID:
+      secretName: "slack-oauth-secret"
+      secretKey: "client-id"
+    CLIENT_SECRET:
+      secretName: "slack-oauth-secret"
+      secretKey: "client-secret"
 
-    auth:
-      type: "google"
-      google:
-        CLIENT_ID:
-          secretName: "google-oauth-secret"
-          secretKey: "client-id"
-        CLIENT_SECRET:
-          secretName: "google-oauth-secret"
-          secretKey: "client-secret"
+# Azure authentication
+auth:
+  type: "azure"
+  azure:
+    CLIENT_ID:
+      secretName: "azure-oauth-secret"
+      secretKey: "client-id"
+    CLIENT_SECRET:
+      secretName: "azure-oauth-secret"
+      secretKey: "client-secret"
+    TENANT_ID:
+      secretName: "azure-oauth-secret"
+      secretKey: "tenant-id"
+
+# OIDC authentication
+auth:
+  type: "oidc"
+  oidc:
+    AUTH_URI:
+      secretName: "oidc-secret"
+      secretKey: "auth-uri"
+    TOKEN_URI:
+      secretName: "oidc-secret"
+      secretKey: "token-uri"
+    USERINFO_URI:
+      secretName: "oidc-secret"
+      secretKey: "userinfo-uri"
+    CLIENT_ID:
+      secretName: "oidc-secret"
+      secretKey: "client-id"
+    CLIENT_SECRET:
+      secretName: "oidc-secret"
+      secretKey: "client-secret"
 ```
 
 ## Minimum Required Configuration
 
 At minimum, you need to set:
 
-1. Authentication provider credentials in the `outline.secrets.auth` section
-2. Generate secrets for `SECRET_KEY` and `UTILS_SECRET` in the `outline.secrets` section
+1. Authentication provider credentials in the `auth` section
+2. Generate secrets for `SECRET_KEY` and `UTILS_SECRET` in the `secrets` section
 3. Set a proper `URL` for your deployment
 
 Example minimal configuration:
 
 ```yaml
-outline:
-  env:
-    URL: "https://your-outline-domain.com"
+env:
+  URL: "https://your-outline-domain.com"
 
-  secrets:
-    SECRET_KEY: "your-random-32-byte-hex-key"
-    UTILS_SECRET: "your-random-32-byte-hex-key"
+secrets:
+  SECRET_KEY:
+    secretName: "outline-secrets"
+    secretKey: "secret-key"
+  UTILS_SECRET:
+    secretName: "outline-secrets"
+    secretKey: "utils-secret"
 
-    auth:
-      type: "google"
-      google:
-        CLIENT_ID: "your-google-client-id"
-        CLIENT_SECRET: "your-google-client-secret"
+auth:
+  type: "google"
+  google:
+    CLIENT_ID:
+      secretName: "google-oauth-secret"
+      secretKey: "client-id"
+    CLIENT_SECRET:
+      secretName: "google-oauth-secret"
+      secretKey: "client-secret"
 ```
 
 ### Security and Secret Management
@@ -339,37 +357,51 @@ The chart automatically handles sensitive information securely:
 
 1. Environment variables containing sensitive data (those with names containing `CLIENT_ID`, `CLIENT_SECRET`, `SECRET`, or `KEY`) are automatically detected and stored in Kubernetes Secrets.
 2. You can explicitly define sensitive data in either:
-   - `outline.envSecrets` - For built-in secrets like `SECRET_KEY` and `UTILS_SECRET`
-   - `outline.secrets` - For additional custom secrets
+   - `envSecrets` - For environment variables containing secrets
+   - `secrets` - For application secrets like `SECRET_KEY` and `UTILS_SECRET`
 
 Sensitive values are never stored as plain text and are securely passed to the application using Kubernetes Secret references.
 
-## Sample Values Files
+## Example Values Files
 
-The chart includes several sample values files to help you get started with common deployment scenarios:
+The chart includes several example values files in the `charts/outline/examples` directory to help you get started with common deployment scenarios:
 
-### External Database (`values-external-db.yaml`)
+### Complete Production Examples
 
-A configuration for using external PostgreSQL and Redis instances:
+These files provide comprehensive examples for different production setups:
+
+- `production-s3.yaml`: Uses MinIO for S3-compatible storage
+  ```bash
+  helm install my-outline ./charts/outline -f charts/outline/examples/production-s3.yaml
+  ```
+
+- `production-aws-s3.yaml`: Uses AWS S3 directly (no MinIO)
+  ```bash
+  helm install my-outline ./charts/outline -f charts/outline/examples/production-aws-s3.yaml
+  ```
+
+- `production-local-storage.yaml`: Uses local storage with persistent volumes
+  ```bash
+  helm install my-outline ./charts/outline -f charts/outline/examples/production-local-storage.yaml
+  ```
+
+### Component-Specific Configurations
+
+The chart also includes modular configuration examples for specific components:
+
+- `auth-configurations.yaml`: Authentication options (Google, Slack, Azure, OIDC)
+- `database-configurations.yaml`: Database options (internal or external PostgreSQL)
+- `storage-configurations.yaml`: Storage options (local, MinIO, AWS S3 with keys or IAM)
+
+These can be combined to create custom configurations:
 
 ```bash
-helm install my-outline ./charts/outline -f charts/outline/values/values-external-db.yaml
+# Install with external PostgreSQL and AWS S3 storage
+helm install my-outline ./charts/outline \
+  -f charts/outline/examples/database-configurations.yaml \
+  -f charts/outline/examples/storage-configurations.yaml \
+  --set-file "database=external-postgresql" \
+  --set-file "storage=aws-s3-keys"
 ```
 
-### S3 with IAM Roles (`values-s3-iam.yaml`)
-
-A configuration for using S3 storage with IAM roles for authentication (no access keys):
-
-```bash
-helm install my-outline ./charts/outline -f charts/outline/values/values-s3-iam.yaml
-```
-
-### S3 with Access Keys (`values-s3-keys.yaml`)
-
-A configuration for using S3 storage with access keys:
-
-```bash
-helm install my-outline ./charts/outline -f charts/outline/values/values-s3-keys.yaml
-```
-
-These sample files demonstrate best practices for different deployment scenarios.
+See the [examples README](charts/outline/examples/README.md) for more details on using these examples.

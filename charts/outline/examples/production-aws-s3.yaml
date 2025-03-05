@@ -1,0 +1,121 @@
+# Production configuration example with AWS S3 storage
+global:
+  env: production
+
+# Outline application configuration
+outline:
+  fileStorage:
+    type: s3
+    uploadMaxSize: "26214400"
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+
+# Image configuration
+image:
+  repository: outlinewiki/outline
+  tag: "0.82.0"
+  pullPolicy: IfNotPresent
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 80
+
+# Ingress configuration
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: wiki.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: outline-tls
+      hosts:
+        - wiki.example.com
+
+# Environment variables
+env:
+  URL: "https://wiki.example.com"
+  PORT: 3000
+  DEFAULT_LANGUAGE: en_US
+  # S3 configuration
+  AWS_REGION: "us-east-1"
+  AWS_S3_UPLOAD_BUCKET_URL: "https://s3.amazonaws.com"
+  AWS_S3_UPLOAD_BUCKET_NAME: "my-outline-bucket"
+  AWS_S3_FORCE_PATH_STYLE: "false"
+
+# AWS credentials should be stored in a secret
+envSecrets:
+  DATABASE_URL:
+    secretName: "outline-db-secrets"
+    secretKey: "DATABASE_URL"
+  REDIS_URL:
+    secretName: "outline-redis-secrets"
+    secretKey: "REDIS_URL"
+  AWS_ACCESS_KEY_ID:
+    secretName: "outline-aws-secrets"
+    secretKey: "access-key-id"
+  AWS_SECRET_ACCESS_KEY:
+    secretName: "outline-aws-secrets"
+    secretKey: "secret-access-key"
+
+# Service account for IAM roles
+# Uncomment to use IAM roles instead of access keys
+# serviceAccount:
+#   create: true
+#   annotations:
+#     eks.amazonaws.com/role-arn: "arn:aws:iam::123456789012:role/outline-s3-role"
+#   name: "outline"
+
+# Secrets configuration
+secrets:
+  SECRET_KEY:
+    secretName: "outline-secrets"
+    secretKey: "secret-key"
+  UTILS_SECRET:
+    secretName: "outline-secrets"
+    secretKey: "utils-secret"
+
+# Authentication configuration (Google OAuth)
+auth:
+  type: "google"
+  google:
+    CLIENT_ID:
+      secretName: "google-oauth-secret"
+      secretKey: "client-id"
+    CLIENT_SECRET:
+      secretName: "google-oauth-secret"
+      secretKey: "client-secret"
+
+# External PostgreSQL database
+postgresql:
+  enabled: false
+
+# External Redis instance
+redis:
+  enabled: false
+
+# Disable MinIO as we're using AWS S3 directly
+minio:
+  enabled: false
+
+# Optional SMTP configuration
+optional:
+  smtp:
+    enabled: true
+    host: "smtp.example.com"
+    port: "587"
+    username: "no-reply@example.com"
+    password: "change-me-in-production"
+    fromEmail: "wiki@example.com"
+    replyEmail: "no-reply@example.com"
+    secure: true

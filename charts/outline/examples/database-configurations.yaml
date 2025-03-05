@@ -1,0 +1,40 @@
+# Database configurations for Outline
+
+# Internal PostgreSQL configuration
+internal-postgresql: &internal
+  postgresql:
+    enabled: true
+    architecture: standalone
+    auth:
+      database: outline
+      username: outline
+      password: "change-me-in-production"
+      postgresPassword: "change-me-in-production"
+    persistence:
+      enabled: true
+      size: 8Gi
+
+# External PostgreSQL configuration
+external-postgresql: &external
+  postgresql:
+    enabled: false
+
+  # Database connection string should be stored in a secret
+  envSecrets:
+    DATABASE_URL:
+      secretName: "outline-db-secrets"
+      secretKey: "DATABASE_URL"
+
+  # The DATABASE_URL should be in the format:
+  # postgresql://username:password@hostname:5432/outline
+
+# To use one of these configurations, use the following syntax:
+# helm install my-release outline/outline -f values.yaml -f database-configurations.yaml --set-file database=internal-postgresql
+
+# Choose one of these database configurations by uncommenting:
+
+# Use internal PostgreSQL
+<<: *internal
+
+# Use external PostgreSQL
+# <<: *external

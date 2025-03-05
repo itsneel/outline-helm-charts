@@ -24,9 +24,7 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
-            - name: http
-              containerPort: {{ .Values.outline.containerPort }}
-              protocol: TCP
+            - containerPort: {{ .Values.outline.containerPort }}
           livenessProbe:
             {{- toYaml .Values.outline.livenessProbe | nindent 12 }}
           readinessProbe:
@@ -184,96 +182,244 @@ spec:
                   key: {{ .Values.auth.oidc.USERINFO_URI.secretKey }}
             {{- end }}
 
-            {{- if not .Values.postgresql.enabled }}
+            {{- if .Values.postgresql.enabled }}
+            {{- if .Values.postgresql.auth.existingSecret }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.postgresql.auth.existingSecret }}"
+                  key: "password"
+              {{- if .Values.postgresql.auth.host }}
             - name: DATABASE_URL
-              {{- if .Values.postgresql.external.existingSecret }}
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.postgresql.external.existingSecret }}
-                  key: {{ .Values.postgresql.external.existingSecretKey | default "DATABASE_URL" }}
+              value: "postgres://{{ .Values.postgresql.auth.username }}:$(POSTGRES_PASSWORD)@{{ .Values.postgresql.auth.host }}:5432/{{ .Values.postgresql.auth.database }}"
+            - name: DATABASE_URL_TEST
+              value: "postgres://{{ .Values.postgresql.auth.username }}:$(POSTGRES_PASSWORD)@{{ .Values.postgresql.auth.host }}:5432/{{ .Values.postgresql.auth.database }}_test"
               {{- else }}
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "outline.fullname" . }}-secrets
-                  key: DATABASE_URL
+            - name: DATABASE_URL
+              value: "postgres://{{ .Values.postgresql.auth.username }}:$(POSTGRES_PASSWORD)@{{ .Release.Name }}-postgresql:5432/{{ .Values.postgresql.auth.database }}"
+            - name: DATABASE_URL_TEST
+              value: "postgres://{{ .Values.postgresql.auth.username }}:$(POSTGRES_PASSWORD)@{{ .Release.Name }}-postgresql:5432/{{ .Values.postgresql.auth.database }}_test"
               {{- end }}
             {{- else }}
+              {{- if .Values.postgresql.auth.host }}
             - name: DATABASE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "outline.fullname" . }}-secrets
-                  key: DATABASE_URL
-            {{- end }}
-
-            {{- if not .Values.redis.enabled }}
-            - name: REDIS_URL
-              {{- if .Values.redis.external.existingSecret }}
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.redis.external.existingSecret }}
-                  key: {{ .Values.redis.external.existingSecretKey | default "REDIS_URL" }}
+              value: "postgres://{{ .Values.postgresql.auth.username }}:{{ .Values.postgresql.auth.password }}@{{ .Values.postgresql.auth.host }}:5432/{{ .Values.postgresql.auth.database }}"
+            - name: DATABASE_URL_TEST
+              value: "postgres://{{ .Values.postgresql.auth.username }}:{{ .Values.postgresql.auth.password }}@{{ .Values.postgresql.auth.host }}:5432/{{ .Values.postgresql.auth.database }}_test"
               {{- else }}
+            - name: DATABASE_URL
+              value: "postgres://{{ .Values.postgresql.auth.username }}:{{ .Values.postgresql.auth.password }}@{{ .Release.Name }}-postgresql:5432/{{ .Values.postgresql.auth.database }}"
+            - name: DATABASE_URL_TEST
+              value: "postgres://{{ .Values.postgresql.auth.username }}:{{ .Values.postgresql.auth.password }}@{{ .Release.Name }}-postgresql:5432/{{ .Values.postgresql.auth.database }}_test"
+              {{- end }}
+            {{- end }}
+          {{- else }}
+            {{- if .Values.postgresql.auth.existingSecret }}
+            - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "outline.fullname" . }}-secrets
-                  key: REDIS_URL
+                  name: "{{ .Values.postgresql.auth.existingSecret }}"
+                  key: password
+              {{- if .Values.postgresql.auth.host }}
+            - name: DATABASE_URL
+              value: "postgres://{{ .Values.postgresql.auth.username }}:$(POSTGRES_PASSWORD)@{{ .Values.postgresql.auth.host }}:5432/{{ .Values.postgresql.auth.database }}"
+            - name: DATABASE_URL_TEST
+              value: "postgres://{{ .Values.postgresql.auth.username }}:$(POSTGRES_PASSWORD)@{{ .Values.postgresql.auth.host }}:5432/{{ .Values.postgresql.auth.database }}_test"
+              {{- else }}
+            - name: DATABASE_URL
+              value: "postgres://{{ .Values.postgresql.auth.username }}:$(POSTGRES_PASSWORD)@{{ .Release.Name }}-postgresql:5432/{{ .Values.postgresql.auth.database }}"
+            - name: DATABASE_URL_TEST
+              value: "postgres://{{ .Values.postgresql.auth.username }}:$(POSTGRES_PASSWORD)@{{ .Release.Name }}-postgresql:5432/{{ .Values.postgresql.auth.database }}_test"
               {{- end }}
             {{- else }}
-            - name: REDIS_URL
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "outline.fullname" . }}-secrets
-                  key: REDIS_URL
+              {{- if .Values.postgresql.auth.host }}
+            - name: DATABASE_URL
+              value: "postgres://{{ .Values.postgresql.auth.username }}:{{ .Values.postgresql.auth.password }}@{{ .Values.postgresql.auth.host }}:5432/{{ .Values.postgresql.auth.database }}"
+            - name: DATABASE_URL_TEST
+              value: "postgres://{{ .Values.postgresql.auth.username }}:{{ .Values.postgresql.auth.password }}@{{ .Values.postgresql.auth.host }}:5432/{{ .Values.postgresql.auth.database }}_test"
+              {{- else }}
+            - name: DATABASE_URL
+              value: "postgres://{{ .Values.postgresql.auth.username }}:{{ .Values.postgresql.auth.password }}@{{ .Release.Name }}-postgresql:5432/{{ .Values.postgresql.auth.database }}"
+            - name: DATABASE_URL_TEST
+              value: "postgres://{{ .Values.postgresql.auth.username }}:{{ .Values.postgresql.auth.password }}@{{ .Release.Name }}-postgresql:5432/{{ .Values.postgresql.auth.database }}_test"
+              {{- end }}
+            {{- end }}
             {{- end }}
 
-            {{- if .Values.minio.enabled }}
-            # S3 storage configuration
-            - name: FILE_STORAGE
-              value: "s3"
-            - name: AWS_REGION
-              value: {{ .Values.minio.s3Config.region | quote }}
-            - name: AWS_S3_UPLOAD_BUCKET_NAME
-              value: {{ .Values.minio.s3Config.uploadBucketName | quote }}
-            - name: AWS_S3_UPLOAD_BUCKET_URL
-              value: {{ .Values.minio.s3Config.uploadBucketUrl | quote }}
-            - name: AWS_S3_FORCE_PATH_STYLE
-              value: {{ .Values.minio.s3Config.forcePathStyle | quote }}
-            - name: AWS_S3_ACL
-              value: "private"
-            {{- if not .Values.minio.auth.existingSecret }}
+            - name: DATABASE_CONNECTION_POOL_MIN
+              value: "{{ .Values.outline.database.connectionPoolMin }}"
+            - name: DATABASE_CONNECTION_POOL_MAX
+              value: "{{ .Values.outline.database.connectionPoolMax }}"
+            - name: PGSSLMODE
+              value: "{{ .Values.outline.database.sslMode }}"
+
+            {{- if .Values.redis.enabled }}
+            - name: REDIS_URL
+              value: "redis://{{ .Release.Name }}-redis-master:6379"
+            {{- end }}
+
+            - name: COLLABORATION_URL
+              value: "{{ .Values.optional.collaborationUrl }}"
+            - name: FORCE_HTTPS
+              value: "{{ .Values.optional.forceHttps }}"
+            - name: ENABLE_UPDATES
+              value: "{{ .Values.optional.enableUpdates }}"
+            - name: WEB_CONCURRENCY
+              value: "{{ .Values.optional.webConcurrency }}"
+            - name: FILE_STORAGE_IMPORT_MAX_SIZE
+              value: "{{ .Values.optional.fileStorageImportMaxSize}}"
+            - name: LOG_LEVEL
+              value: "{{ .Values.optional.logLevel }}"
+            - name: GOOGLE_ANALYTICS_ID
+              value: "{{ .Values.optional.googleAnalyticsId }}"
+            - name: SENTRY_DSN
+              value: "{{ .Values.optional.sentry.dsn }}"
+            - name: SENTRY_TUNNEL
+              value: "{{ .Values.optional.sentry.tunnel }}"
+
+          {{- if .Values.optional.smtp.enabled }}
+            {{- if .Values.optional.smtp.existingSecret }}
+            - name: SMTP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.optional.smtp.existingSecret }}"
+                  key: smtp-password
+            {{- else }}
+            - name: SMTP_PASSWORD
+              value: "{{ .Values.optional.smtp.password }}"
+            {{- end }}
+            - name: SMTP_HOST
+              value: "{{ .Values.optional.smtp.host }}"
+            - name: SMTP_PORT
+              value: "{{ .Values.optional.smtp.port }}"
+            - name: SMTP_USERNAME
+              value: "{{ .Values.optional.smtp.username }}"
+            - name: SMTP_FROM_EMAIL
+              value: "{{ .Values.optional.smtp.fromEmail }}"
+            - name: SMTP_REPLY_EMAIL
+              value: "{{ .Values.optional.smtp.replyEmail }}"
+            - name: SMTP_TLS_CIPHERS
+              value: "{{ .Values.optional.smtp.tlsCiphers }}"
+            - name: SMTP_SECURE
+              value: "{{ .Values.optional.smtp.secure }}"
+          {{- end }}
+
+          {{- if .Values.optional.github.enabled }}
+            {{- if .Values.optional.github.clientId.existingSecret }}
+            - name: GITHUB_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.optional.github.clientId.existingSecret }}"
+                  key: github-client-id
+            {{- else }}
+            - name: GITHUB_CLIENT_ID
+              value: "{{ .Values.optional.github.clientId.value }}"
+            {{- end }}
+            {{- if .Values.optional.github.clientSecret.existingSecret }}
+            - name: GITHUB_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.optional.github.clientSecret.existingSecret }}"
+                  key: github-client-secret
+            {{- else }}
+            - name: GITHUB_CLIENT_SECRET
+              value: "{{ .Values.optional.github.clientSecret.value }}"
+            {{- end }}
+            {{- if .Values.optional.github.appName.existingSecret }}
+            - name: GITHUB_APP_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.optional.github.appName.existingSecret }}"
+                  key: github-app-name
+            {{- else }}
+            - name: GITHUB_APP_NAME
+              value: "{{ .Values.optional.github.appName.value }}"
+            {{- end }}
+            {{- if .Values.optional.github.appId.existingSecret }}
+            - name: GITHUB_APP_ID
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.optional.github.appId.existingSecret }}"
+                  key: github-app-id
+            {{- else }}
+            - name: GITHUB_APP_ID
+              value: "{{ .Values.optional.github.appId.value }}"
+            {{- end }}
+            {{- if .Values.optional.github.appPrivateKey.existingSecret }}
+            - name: GITHUB_APP_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.optional.github.appPrivateKey.existingSecret }}"
+                  key: github-app-private-key
+            {{- else }}
+            - name: GITHUB_APP_PRIVATE_KEY
+              value: "{{ .Values.optional.github.appPrivateKey.value }}"
+            {{- end }}
+          {{- end }}
+
+          {{- if and (eq .Values.outline.fileStorage.type "s3") (.Values.minio.enabled) }}
+            {{- if .Values.minio.auth.existingSecret }}
             - name: AWS_ACCESS_KEY_ID
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "outline.fullname" . }}-s3-secrets
-                  key: access-key
+                  name: "{{ .Values.minio.auth.existingSecret }}"
+                  key: root-user
             - name: AWS_SECRET_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "outline.fullname" . }}-s3-secrets
-                  key: secret-key
-            {{- end }}
+                  name: "{{ .Values.minio.auth.existingSecret }}"
+                  key: root-password
             {{- else }}
-            # Local storage configuration
-            - name: FILE_STORAGE
-              value: {{ .Values.outline.fileStorage.type | quote }}
+            - name: AWS_ACCESS_KEY_ID
+              value: "{{ .Values.minio.auth.rootUser }}"
+            - name: AWS_SECRET_ACCESS_KEY
+              value: "{{ .Values.minio.auth.rootPassword }}"
             {{- end }}
+            - name: AWS_REGION
+              value: "{{ .Values.minio.s3Config.region }}"
+            - name: AWS_S3_UPLOAD_BUCKET_NAME
+              value: "{{ .Values.minio.s3Config.uploadBucketName }}"
+            - name: AWS_S3_UPLOAD_BUCKET_URL
+              value: "{{ .Values.minio.s3Config.uploadBucketUrl }}"
+            - name: AWS_S3_FORCE_PATH_STYLE
+              value: "{{ .Values.minio.s3Config.forcePathStyle }}"
+            - name: AWS_S3_ACL
+              value: "{{ .Values.minio.s3Config.acl }}"
+            - name: FILE_STORAGE_UPLOAD_MAX_SIZE
+              value: "{{ .Values.minio.s3Config.uploadMaxSize }}"
+          {{- else if eq .Values.outline.fileStorage.type "local" }}
+            - name: FILE_STORAGE
+              value: "{{ .Values.outline.fileStorage.type }}"
+            - name: FILE_STORAGE_LOCAL_ROOT_DIR
+              value: "{{ .Values.outline.fileStorage.localRootDir }}"
+            - name: FILE_STORAGE_UPLOAD_MAX_SIZE
+              value: "{{ .Values.outline.fileStorage.uploadMaxSize }}"
+          {{- end }}
+
           envFrom:
             - secretRef:
                 name: {{ include "outline.fullname" . }}-secrets
             - configMapRef:
                 name: {{ include "outline.fullname" . }}-config
-          {{- if eq .Values.outline.fileStorage.type "local" }}
-          volumeMounts:
-            - name: data
-              mountPath: /var/lib/outline/data
-          {{- end }}
+
       {{- if eq .Values.outline.fileStorage.type "local" }}
+          volumeMounts:
+          - name: {{ .Release.Name }}-data
+            mountPath: {{ .Values.outline.fileStorage.localRootDir }}
       volumes:
-        - name: data
-          {{- if .Values.persistence.enabled }}
-          persistentVolumeClaim:
-            claimName: {{ include "outline.fullname" . }}-data
-          {{- else }}
-          emptyDir: {}
-          {{- end }}
+      - name: {{ .Release.Name }}-data
+        persistentVolumeClaim:
+          claimName: {{ .Release.Name }}-data
+      {{- end }}
+      {{- with .Values.outline.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.outline.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.outline.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
       {{- end }}

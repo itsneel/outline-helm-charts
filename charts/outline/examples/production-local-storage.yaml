@@ -1,0 +1,116 @@
+# Production configuration example with local storage
+global:
+  env: production
+
+# Outline application configuration
+outline:
+  fileStorage:
+    type: local
+    localRootDir: /var/lib/outline/data
+    uploadMaxSize: "26214400"
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+
+# Image configuration
+image:
+  repository: outlinewiki/outline
+  tag: "0.82.0"
+  pullPolicy: IfNotPresent
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 80
+
+# Persistent volume for local file storage
+persistence:
+  enabled: true
+  accessMode: ReadWriteOnce
+  size: 50Gi
+  storageClass: "standard"
+
+# Ingress configuration
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: wiki.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: outline-tls
+      hosts:
+        - wiki.example.com
+
+# Environment variables
+env:
+  URL: "https://wiki.example.com"
+  PORT: 3000
+  DEFAULT_LANGUAGE: en_US
+
+# Secrets configuration
+secrets:
+  SECRET_KEY:
+    secretName: "outline-secrets"
+    secretKey: "secret-key"
+  UTILS_SECRET:
+    secretName: "outline-secrets"
+    secretKey: "utils-secret"
+
+# Authentication configuration (Google OAuth)
+auth:
+  type: "google"
+  google:
+    CLIENT_ID:
+      secretName: "google-oauth-secret"
+      secretKey: "client-id"
+    CLIENT_SECRET:
+      secretName: "google-oauth-secret"
+      secretKey: "client-secret"
+
+# PostgreSQL configuration
+postgresql:
+  enabled: true
+  architecture: standalone
+  auth:
+    database: outline
+    username: outline
+    password: "change-me-in-production"
+    postgresPassword: "change-me-in-production"
+  persistence:
+    enabled: true
+    size: 8Gi
+
+# Redis configuration
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: false
+  persistence:
+    enabled: true
+    size: 1Gi
+
+# Disable MinIO as we're using local storage
+minio:
+  enabled: false
+
+# Optional SMTP configuration
+optional:
+  smtp:
+    enabled: true
+    host: "smtp.example.com"
+    port: "587"
+    username: "no-reply@example.com"
+    password: "change-me-in-production"
+    fromEmail: "wiki@example.com"
+    replyEmail: "no-reply@example.com"
+    secure: true

@@ -1,0 +1,78 @@
+# Authentication configurations for Outline
+
+# Google OAuth configuration
+google-oauth: &google
+  auth:
+    type: "google"
+    google:
+      CLIENT_ID:
+        secretName: "google-oauth-secret"
+        secretKey: "client-id"
+      CLIENT_SECRET:
+        secretName: "google-oauth-secret"
+        secretKey: "client-secret"
+
+# Slack authentication configuration
+slack-auth: &slack
+  auth:
+    type: "slack"
+    slack:
+      CLIENT_ID:
+        secretName: "slack-oauth-secret"
+        secretKey: "client-id"
+      CLIENT_SECRET:
+        secretName: "slack-oauth-secret"
+        secretKey: "client-secret"
+
+# Azure authentication configuration
+azure-auth: &azure
+  auth:
+    type: "azure"
+    azure:
+      CLIENT_ID:
+        secretName: "azure-oauth-secret"
+        secretKey: "client-id"
+      CLIENT_SECRET:
+        secretName: "azure-oauth-secret"
+        secretKey: "client-secret"
+      TENANT_ID:
+        secretName: "azure-oauth-secret"
+        secretKey: "tenant-id"
+
+# OIDC authentication configuration
+oidc-auth: &oidc
+  auth:
+    type: "oidc"
+    oidc:
+      AUTH_URI:
+        secretName: "oidc-secret"
+        secretKey: "auth-uri"
+      TOKEN_URI:
+        secretName: "oidc-secret"
+        secretKey: "token-uri"
+      USERINFO_URI:
+        secretName: "oidc-secret"
+        secretKey: "userinfo-uri"
+      CLIENT_ID:
+        secretName: "oidc-secret"
+        secretKey: "client-id"
+      CLIENT_SECRET:
+        secretName: "oidc-secret"
+        secretKey: "client-secret"
+
+# To use one of these configurations, use the following syntax:
+# helm install my-release outline/outline -f values.yaml -f auth-configurations.yaml --set-file auth=google-oauth
+
+# Choose one of these authentication methods by uncommenting:
+
+# Use Google OAuth
+<<: *google
+
+# Use Slack authentication
+# <<: *slack
+
+# Use Azure authentication
+# <<: *azure
+
+# Use OIDC authentication
+# <<: *oidc

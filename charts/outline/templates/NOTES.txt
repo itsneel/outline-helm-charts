@@ -34,18 +34,22 @@ Get the application URL by running these commands:
 IMPORTANT NOTES:
 {{- if eq (.Values.outline.fileStorage.type | default "local") "s3" }}
 Storage configuration: Using S3 storage
-{{- if .Values.minio.auth.existingSecret }}
-  S3 authentication: Using existing secret '{{ .Values.minio.auth.existingSecret }}'
-{{- else if .Values.storage.s3.useServiceAccount }}
-  S3 authentication: IAM Role (using service account)
-  Ensure the service account has appropriate permissions to access the S3 bucket
-{{- else }}
-  S3 authentication: Access Key/Secret Key
-{{- end }}
+{{- if .Values.minio.enabled }}
+  MinIO: Enabled ({{ .Values.minio.auth.existingSecret | default "using generated credentials" }})
   S3 Bucket URL: {{ .Values.minio.s3Config.uploadBucketUrl }}
   S3 Bucket Name: {{ .Values.minio.s3Config.uploadBucketName }}
+{{- else if .Values.serviceAccount.create }}
+  S3 authentication: IAM Role (using service account)
+  Ensure the service account has appropriate permissions to access the S3 bucket.
+{{- else }}
+  S3 authentication: Using Access/Secret Keys
+{{- end }}
 {{- else }}
 Storage configuration: Using local storage
+  Persistence: {{ .Values.persistence.enabled | ternary "Enabled" "Disabled" }}
+  {{- if .Values.persistence.enabled }}
+  Storage Size: {{ .Values.persistence.size }}
+  {{- end }}
 {{- end }}
 
 {{- if not .Values.secrets.SECRET_KEY }}
@@ -60,7 +64,10 @@ Storage configuration: Using local storage
   You must set the URL in your values file. This should be the fully qualified URL
   where users will access your Outline instance.
 {{- end }}
-{{- if not .Values.auth.type }}
-  You must configure at least one authentication provider (Slack, Google, Microsoft, or OIDC).
+
+{{- if .Values.auth.type }}
+Authentication Provider: {{ .Values.auth.type | upper }}
+{{- else }}
+  WARNING: You must configure at least one authentication provider (Slack, Google, Microsoft, or OIDC).
   See the documentation for more details.
 {{- end }}

@@ -33,11 +33,6 @@ render-build: clean
 	# Render the main chart
 	helm template charts/outline > build/outline-rendered.yaml
 
-	# Render with different values files
-	helm template -f charts/outline/values/values-s3-keys.yaml charts/outline > build/outline-s3-keys-rendered.yaml
-	helm template -f charts/outline/values/values-s3-iam.yaml charts/outline > build/outline-s3-iam-rendered.yaml
-	helm template -f charts/outline/values/values-external-db.yaml charts/outline > build/outline-external-db-rendered.yaml
-
 	echo "Charts rendered in build directory"
 
 # Validate the chart installation
