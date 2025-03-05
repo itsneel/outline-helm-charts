@@ -259,7 +259,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: "{{ .Values.redis.auth.existingSecret }}"
-                  key: "{{ .Values.redis.auth.existingSecretKey | default "password" }}"
+                  key: "{{ .Values.redis.auth.existingSecretPasswordKey | default "password" }}"
               {{- if .Values.redis.auth.host }}
             - name: REDIS_URL
               value: "redis://:$(REDIS_PASSWORD)@{{ .Values.redis.auth.host }}:{{ .Values.redis.auth.port }}"
