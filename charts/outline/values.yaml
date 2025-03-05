@@ -12,7 +12,7 @@ global:
 ## @param outline.nodeEnv The environment in which the application is running (e.g., production, development).
 ## @param outline.database.connectionPoolMin Minimum number of connections in the database pool.
 ## @param outline.database.connectionPoolMax Maximum number of connections in the database pool.
-## @param outline.database.sslMode SSL mode for the database connection.
+## @param outline.database.sslMode SSL mode for the database connection possible values [disable, allow, require, prefer, verify-ca, verify-full]
 ## @param outline.service.url The URL where the application will be accessible.
 ## @param outline.service.port The port on which the application will run.
 ## @param outline.fileStorage.type Type of file storage to be used (e.g., local, s3).
@@ -30,7 +30,7 @@ outline:
   database:
     connectionPoolMin: ""
     connectionPoolMax: "20"
-    sslMode: disable
+    sslMode: allow
   resources:
     limits:
       cpu: 1000m
@@ -266,15 +266,16 @@ auth:
 ##
 redis:
   # Set to true to use an internal Redis deployment
-  enabled: true
+  enabled: false
   architecture: standalone
 
   auth:
     enabled: false
+    host: ""
+    username: ""
+    port: 6379
     existingSecret: ""
     existingSecretPasswordKey: ""
-    host: ""
-    port: 6379
 
   # Internal Redis configuration (when enabled=true)
   password: ""

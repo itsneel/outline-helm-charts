@@ -25,6 +25,7 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.outline.containerPort }}
+              name: http
           livenessProbe:
             {{- toYaml .Values.outline.livenessProbe | nindent 12 }}
           readinessProbe:
@@ -253,7 +254,6 @@ spec:
             - name: PGSSLMODE
               value: "{{ .Values.outline.database.sslMode }}"
 
-            {{- if .Values.redis.enabled }}
             {{- if and .Values.redis.auth.enabled .Values.redis.auth.existingSecret }}
             - name: REDIS_PASSWORD
               valueFrom:
@@ -262,16 +262,15 @@ spec:
                   key: "{{ .Values.redis.auth.existingSecretPasswordKey | default "password" }}"
               {{- if .Values.redis.auth.host }}
             - name: REDIS_URL
-              value: "redis://:$(REDIS_PASSWORD)@{{ .Values.redis.auth.host }}:{{ .Values.redis.auth.port }}"
+              value: "redis://{{ .Values.redis.auth.username }}:$(REDIS_PASSWORD)@{{ .Values.redis.auth.host }}:{{ .Values.redis.auth.port }}"
               {{- else }}
             - name: REDIS_URL
-              value: "redis://:$(REDIS_PASSWORD)@{{ .Release.Name }}-redis-master:{{ .Values.redis.auth.port }}"
+              value: "redis://{{ .Values.redis.auth.username }}:$(REDIS_PASSWORD)@{{ .Release.Name }}-redis-master:{{ .Values.redis.auth.port }}"
               {{- end }}
             {{- else }}
             {{- if not .Values.redis.auth }}
             - name: REDIS_URL
               value: "redis://{{ .Values.redis.auth.host }}:{{ .Values.redis.auth.port }}"
-            {{- end }}
             {{- end }}
             {{- end }}
 
