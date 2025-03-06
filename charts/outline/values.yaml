@@ -274,6 +274,7 @@ redis:
     host: ""
     username: ""
     port: 6379
+    protocol: rediss
     existingSecret: ""
     existingSecretPasswordKey: ""
 
