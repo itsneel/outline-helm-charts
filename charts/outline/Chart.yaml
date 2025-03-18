@@ -2,7 +2,7 @@ apiVersion: v2
 name: outline
 description: A Helm chart for Outline Wiki
 type: application
-version: 0.0.8
+version: 0.0.9
 appVersion: "0.82.0"
 keywords:
   - knowledge-base
