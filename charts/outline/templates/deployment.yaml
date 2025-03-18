@@ -373,7 +373,20 @@ spec:
             {{- end }}
           {{- end }}
 
+
+
+          {{- if eq .Values.outline.fileStorage.type "local" }}
+            # local storage
+            - name: FILE_STORAGE
+              value: local
+            - name: FILE_STORAGE_LOCAL_ROOT_DIR
+              value: "{{ .Values.outline.fileStorage.localRootDir }}"
+            - name: FILE_STORAGE_UPLOAD_MAX_SIZE
+          {{- end }}
           {{- if and (eq .Values.outline.fileStorage.type "s3") (.Values.minio.enabled) }}
+            # s3 storage with minio
+            - name: FILE_STORAGE
+              value: s3
             {{- if .Values.minio.auth.existingSecret }}
             - name: AWS_ACCESS_KEY_ID
               valueFrom:
@@ -403,12 +416,32 @@ spec:
               value: "{{ .Values.minio.s3Config.acl }}"
             - name: FILE_STORAGE_UPLOAD_MAX_SIZE
               value: "{{ .Values.minio.s3Config.uploadMaxSize }}"
-          {{- else if eq .Values.outline.fileStorage.type "local" }}
+          {{- end }}
+          {{- if and (eq .Values.outline.fileStorage.type "s3") (not .Values.minio.enabled) }}
+            # s3 storage direct
             - name: FILE_STORAGE
-              value: "{{ .Values.outline.fileStorage.type }}"
-            - name: FILE_STORAGE_LOCAL_ROOT_DIR
-              value: "{{ .Values.outline.fileStorage.localRootDir }}"
-            - name: FILE_STORAGE_UPLOAD_MAX_SIZE
+              value: s3
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.outline.fileStorage.s3Config.existingSecret.name }}"
+                  key: "{{ .Values.outline.fileStorage.s3Config.existingSecret.keyName }}"
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.outline.fileStorage.s3Config.existingSecret.name }}"
+                  key: "{{ .Values.outline.fileStorage.s3Config.existingSecret.secretName }}"
+            - name: AWS_REGION
+              value: "{{ .Values.outline.fileStorage.s3Config.region }}"
+            - name: AWS_S3_UPLOAD_BUCKET_NAME
+              value: "{{ .Values.outline.fileStorage.s3Config.uploadBucketName }}"
+            - name: AWS_S3_UPLOAD_BUCKET_URL
+              value: "{{ .Values.outline.fileStorage.s3Config.uploadBucketUrl }}"
+            - name: AWS_S3_FORCE_PATH_STYLE
+              value: "{{ .Values.outline.fileStorage.s3Config.forcePathStyle }}"
+            - name: AWS_S3_ACL
+              value: "{{ .Values.outline.fileStorage.s3Config.acl }}"
+            - name: AWS_S3_UPLOAD_MAX_SIZE
               value: "{{ .Values.outline.fileStorage.uploadMaxSize }}"
           {{- end }}
 

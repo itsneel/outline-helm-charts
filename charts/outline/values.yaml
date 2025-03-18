@@ -20,7 +20,10 @@ global:
 ## @param outline.fileStorage.storageSize The storageclass size to use default 250Gi.
 ## @param outline.fileStorage.localRootDir Local directory path for storing files, if using local storage.
 ## @param outline.fileStorage.uploadMaxSize Maximum file upload size limit.
-## @param outline.fileStorage.initContainerSecurityContext.enabled Whether to set the security context for the initContainer. Useful for deployments on GKE and similar.
+## @param outline.fileStorage.existingSecret Reference to an existing Kubernetes secret for the file storage (outline-file-storage).
+## @param outline.fileStorage.existingSecret.name Name of the existing secret.
+## @param outline.fileStorage.existingSecret.keyName Key name of the existing secret.
+## @param outline.fileStorage.existingSecret.secretName Secret name of the existing secret.
 ## @param outline.nodeSelector Optional node selector to use.
 ## @param outline.tolerations Whether to set node tolerations.
 ## @param outline.affinity Whether to set node affinity.
@@ -57,12 +60,22 @@ outline:
 
   fileStorage:
     type: s3 # set to local|s3
-    storageClassName: ""
-    storageSize: 250Gi
-    localRootDir: /var/lib/outline/data
-    uploadMaxSize: "26214400"
-    initContainerSecurityContext:
-      enabled: false
+    s3Config:
+      region: "eu-central-1" # s3
+      uploadBucketName: "outline" # s3
+      uploadBucketUrl: "http://something" # s3
+      forcePathStyle: true # s3
+      acl: private # s3
+      existingSecret: # only for s3 settings aws secrets
+        name: "outline-file-storage"
+        keyName: "k"
+        secretName: "v"
+
+    storageSize: 250Gi # local
+    storageClassName: "" # local
+    localRootDir: /var/lib/outline/data # local
+    uploadMaxSize: "26214400" # local or s3
+
   nodeSelector: {}
   tolerations: []
   affinity: {}
